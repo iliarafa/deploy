@@ -7,14 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { type MaterialRequest } from "@shared/schema";
-import { Search, Calendar, MapPin, Package, Hash } from "lucide-react";
+import { Search, Calendar, MapPin, Package, Hash, Plus } from "lucide-react";
 import { useState } from "react";
 import { formatDate } from "@/lib/date-utils";
+import MaterialRequestModal from "@/components/materials/material-request-modal";
 
 export default function Materials() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const { data: requests = [], isLoading } = useQuery<MaterialRequest[]>({
     queryKey: ["/api/material-requests"],
@@ -50,9 +52,9 @@ export default function Materials() {
 
   const getMaterialTypeColor = (type: string) => {
     switch (type.toLowerCase()) {
-      case "concrete": return "bg-gray-100 text-gray-800";
-      case "steel": return "bg-blue-100 text-blue-800";
-      case "lumber": return "bg-green-100 text-green-800";
+      case "sheetrock": return "bg-gray-100 text-gray-800";
+      case "paint": return "bg-blue-100 text-blue-800";
+      case "compound": return "bg-green-100 text-green-800";
       case "electrical": return "bg-yellow-100 text-yellow-800";
       case "plumbing": return "bg-blue-100 text-blue-800";
       case "tools": return "bg-purple-100 text-purple-800";
@@ -68,6 +70,13 @@ export default function Materials() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mb-20 md:mb-0">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-4 md:mb-0">Material Requests</h1>
+          <Button 
+            onClick={() => setIsModalOpen(true)}
+            className="bg-orange-500 hover:bg-orange-600 text-white"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            New Material Request
+          </Button>
         </div>
 
         {/* Filters */}
@@ -182,6 +191,11 @@ export default function Materials() {
           )}
         </div>
       </main>
+      
+      <MaterialRequestModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+      />
     </div>
   );
 }
