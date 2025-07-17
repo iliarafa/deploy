@@ -12,6 +12,8 @@ import {
   type Communication,
   type InsertCommunication
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, gte, lte } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -98,7 +100,13 @@ export class MemStorage implements IStorage {
     const task: Task = { 
       ...insertTask, 
       id, 
-      createdAt: new Date()
+      createdAt: new Date(),
+      description: insertTask.description || null,
+      location: insertTask.location || null,
+      assignedTo: insertTask.assignedTo || null,
+      endDate: insertTask.endDate || null,
+      status: insertTask.status || "pending",
+      priority: insertTask.priority || "standard"
     };
     this.tasks.set(id, task);
     return task;
@@ -131,7 +139,10 @@ export class MemStorage implements IStorage {
     const request: MaterialRequest = { 
       ...insertRequest, 
       id, 
-      createdAt: new Date()
+      createdAt: new Date(),
+      notes: insertRequest.notes || null,
+      status: insertRequest.status || "pending",
+      priority: insertRequest.priority || "standard"
     };
     this.materialRequests.set(id, request);
     return request;
@@ -166,11 +177,121 @@ export class MemStorage implements IStorage {
     const communication: Communication = { 
       ...insertCommunication, 
       id, 
-      createdAt: new Date()
+      createdAt: new Date(),
+      taskId: insertCommunication.taskId || null
     };
     this.communications.set(id, communication);
     return communication;
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  async getTasks(): Promise<Task[]> {
+    return await db.select().from(tasks);
+  }
+
+  async getTask(id: number): Promise<Task | undefined> {
+    const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
+    return task || undefined;
+  }
+
+  async getTasksByDateRange(startDate: Date, endDate: Date): Promise<Task[]> {
+    return await db
+      .select()
+      .from(tasks)
+      .where(and(gte(tasks.startDate, startDate), lte(tasks.startDate, endDate)));
+  }
+
+  async createTask(insertTask: InsertTask): Promise<Task> {
+    const [task] = await db
+      .insert(tasks)
+      .values(insertTask)
+      .returning();
+    return task;
+  }
+
+  async updateTask(id: number, updates: Partial<InsertTask>): Promise<Task> {
+    const [task] = await db
+      .update(tasks)
+      .set(updates)
+      .where(eq(tasks.id, id))
+      .returning();
+    if (!task) {
+      throw new Error(`Task with id ${id} not found`);
+    }
+    return task;
+  }
+
+  async deleteTask(id: number): Promise<void> {
+    await db.delete(tasks).where(eq(tasks.id, id));
+  }
+
+  async getMaterialRequests(): Promise<MaterialRequest[]> {
+    return await db.select().from(materialRequests);
+  }
+
+  async getMaterialRequest(id: number): Promise<MaterialRequest | undefined> {
+    const [request] = await db.select().from(materialRequests).where(eq(materialRequests.id, id));
+    return request || undefined;
+  }
+
+  async createMaterialRequest(insertRequest: InsertMaterialRequest): Promise<MaterialRequest> {
+    const [request] = await db
+      .insert(materialRequests)
+      .values(insertRequest)
+      .returning();
+    return request;
+  }
+
+  async updateMaterialRequest(id: number, updates: Partial<InsertMaterialRequest>): Promise<MaterialRequest> {
+    const [request] = await db
+      .update(materialRequests)
+      .set(updates)
+      .where(eq(materialRequests.id, id))
+      .returning();
+    if (!request) {
+      throw new Error(`Material request with id ${id} not found`);
+    }
+    return request;
+  }
+
+  async deleteMaterialRequest(id: number): Promise<void> {
+    await db.delete(materialRequests).where(eq(materialRequests.id, id));
+  }
+
+  async getCommunications(): Promise<Communication[]> {
+    return await db.select().from(communications);
+  }
+
+  async getCommunicationsByTask(taskId: number): Promise<Communication[]> {
+    return await db.select().from(communications).where(eq(communications.taskId, taskId));
+  }
+
+  async createCommunication(insertCommunication: InsertCommunication): Promise<Communication> {
+    const [communication] = await db
+      .insert(communications)
+      .values(insertCommunication)
+      .returning();
+    return communication;
+  }
+}
+
+export const storage = new DatabaseStorage();

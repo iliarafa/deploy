@@ -21,10 +21,10 @@ Preferred communication style: Simple, everyday language.
 
 ### Backend Architecture
 - **Framework**: Express.js with TypeScript
-- **Database**: PostgreSQL with Drizzle ORM
-- **Schema**: Shared TypeScript schema definitions with Zod validation
+- **Database**: PostgreSQL with Drizzle ORM (actively connected)
+- **Schema**: Shared TypeScript schema definitions with Zod validation and relations
 - **API**: RESTful endpoints for tasks, materials, and communications
-- **Storage**: Abstracted storage interface with in-memory implementation for development
+- **Storage**: Abstracted storage interface with PostgreSQL DatabaseStorage implementation
 
 ### Database Schema
 - **Users**: Authentication and user management

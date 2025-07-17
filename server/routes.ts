@@ -47,7 +47,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/tasks", async (req, res) => {
     try {
-      const validatedData = insertTaskSchema.parse(req.body);
+      // Convert date fields from strings to Date objects if needed
+      const taskData = {
+        ...req.body,
+        startDate: new Date(req.body.startDate),
+        endDate: req.body.endDate ? new Date(req.body.endDate) : undefined
+      };
+      
+      const validatedData = insertTaskSchema.parse(taskData);
       const task = await storage.createTask(validatedData);
       res.status(201).json(task);
     } catch (error) {
@@ -110,7 +117,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/material-requests", async (req, res) => {
     try {
-      const validatedData = insertMaterialRequestSchema.parse(req.body);
+      // Convert deliveryDate from string to Date object if needed
+      const requestData = {
+        ...req.body,
+        deliveryDate: new Date(req.body.deliveryDate)
+      };
+      
+      const validatedData = insertMaterialRequestSchema.parse(requestData);
       const request = await storage.createMaterialRequest(validatedData);
       res.status(201).json(request);
     } catch (error) {
