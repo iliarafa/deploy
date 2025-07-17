@@ -30,7 +30,7 @@ export default function MaterialRequestModal({ isOpen, onClose }: MaterialReques
   const form = useForm<MaterialRequestFormData>({
     resolver: zodResolver(materialRequestFormSchema),
     defaultValues: {
-      materialType: "concrete",
+      materialType: "sheetrock",
       description: "",
       quantity: 1,
       unit: "pieces",
@@ -94,9 +94,9 @@ export default function MaterialRequestModal({ isOpen, onClose }: MaterialReques
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="concrete">Concrete</SelectItem>
-                      <SelectItem value="steel">Steel</SelectItem>
-                      <SelectItem value="lumber">Lumber</SelectItem>
+                      <SelectItem value="sheetrock">Sheetrock</SelectItem>
+                      <SelectItem value="paint">Paint</SelectItem>
+                      <SelectItem value="compound">Compound</SelectItem>
                       <SelectItem value="electrical">Electrical</SelectItem>
                       <SelectItem value="plumbing">Plumbing</SelectItem>
                       <SelectItem value="tools">Tools</SelectItem>
