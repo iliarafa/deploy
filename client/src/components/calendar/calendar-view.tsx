@@ -88,14 +88,24 @@ export default function CalendarView({
             {day}
           </div>
           <div className="space-y-1">
-            {tasksForDay.slice(0, 3).map((task, index) => (
-              <div 
-                key={task.id} 
-                className={`text-xs px-2 py-1 rounded truncate ${getCategoryColor(task.category)}`}
-              >
-                {task.title}
-              </div>
-            ))}
+            {tasksForDay.slice(0, 3).map((task, index) => {
+              const statusClasses = task.status === 'completed' ? 'task-completed-pulse' :
+                                  task.priority === 'urgent' ? 'task-urgent-shake' : '';
+              const glowClass = task.status === 'pending' ? 'status-glow-pending' :
+                              task.status === 'in-progress' ? 'status-glow-progress' :
+                              task.status === 'completed' ? 'status-glow-completed' : '';
+              
+              return (
+                <div 
+                  key={task.id} 
+                  className={`task-element task-animate-enter task-animate-hover ${getCategoryColor(task.category)} ${statusClasses} ${glowClass} text-xs px-2 py-1 rounded truncate cursor-pointer transform-gpu`}
+                  data-testid={`task-chip-${task.id}`}
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                >
+                  {task.title}
+                </div>
+              );
+            })}
             {tasksForDay.length > 3 && (
               <div className="text-xs text-gray-500 px-2">
                 +{tasksForDay.length - 3} more
@@ -158,21 +168,31 @@ export default function CalendarView({
                       const taskHour = new Date(task.startDate).getHours();
                       return taskHour === hour;
                     })
-                    .map((task, taskIndex) => (
-                      <div
-                        key={task.id}
-                        className={`absolute left-1 right-1 z-10 text-xs px-2 py-1 rounded truncate ${getCategoryColor(task.category)} shadow-sm`}
-                        style={{
-                          top: `${(new Date(task.startDate).getMinutes() / 60) * 60}px`,
-                        }}
-                        title={`${task.title} - ${formatTime(new Date(task.startDate))}`}
-                      >
-                        <div className="font-medium">{task.title}</div>
-                        <div className="text-[10px] opacity-75">
-                          {formatTime(new Date(task.startDate))}
+                    .map((task, taskIndex) => {
+                      const statusClasses = task.status === 'completed' ? 'task-completed-pulse' :
+                                          task.priority === 'urgent' ? 'task-urgent-shake' : '';
+                      const glowClass = task.status === 'pending' ? 'status-glow-pending' :
+                                      task.status === 'in-progress' ? 'status-glow-progress' :
+                                      task.status === 'completed' ? 'status-glow-completed' : '';
+                      
+                      return (
+                        <div
+                          key={task.id}
+                          className={`task-element task-animate-enter task-animate-hover ${getCategoryColor(task.category)} ${statusClasses} ${glowClass} absolute left-1 right-1 z-10 text-xs px-2 py-1 rounded truncate shadow-sm cursor-pointer transform-gpu`}
+                          style={{
+                            top: `${(new Date(task.startDate).getMinutes() / 60) * 60}px`,
+                            animationDelay: `${taskIndex * 0.1}s`
+                          }}
+                          title={`${task.title} - ${formatTime(new Date(task.startDate))}`}
+                          data-testid={`task-week-${task.id}`}
+                        >
+                          <div className="font-medium">{task.title}</div>
+                          <div className="text-[10px] opacity-75">
+                            {formatTime(new Date(task.startDate))}
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   }
                 </div>
               );
@@ -221,7 +241,13 @@ export default function CalendarView({
                     // Check if task falls within this 30-minute slot
                     return taskHour === hour && taskMinute >= minute && taskMinute < minute + 30;
                   })
-                  .map((task) => {
+                  .map((task, taskIndex) => {
+                    const statusClasses = task.status === 'completed' ? 'task-completed-pulse' :
+                                        task.priority === 'urgent' ? 'task-urgent-shake' : '';
+                    const glowClass = task.status === 'pending' ? 'status-glow-pending' :
+                                    task.status === 'in-progress' ? 'status-glow-progress' :
+                                    task.status === 'completed' ? 'status-glow-completed' : '';
+                    
                     const taskDate = new Date(task.startDate);
                     const taskMinute = taskDate.getMinutes();
                     const offsetFromSlotStart = taskMinute - minute;
@@ -229,11 +255,13 @@ export default function CalendarView({
                     return (
                       <div
                         key={task.id}
-                        className={`absolute left-2 right-2 z-10 text-sm px-3 py-2 rounded-lg ${getCategoryColor(task.category)} shadow-sm border border-white/20`}
+                        className={`task-element task-animate-enter task-animate-hover ${getCategoryColor(task.category)} ${statusClasses} ${glowClass} absolute left-2 right-2 z-10 text-sm px-3 py-2 rounded-lg shadow-sm border border-white/20 cursor-pointer transform-gpu`}
                         style={{
                           top: `${(offsetFromSlotStart / 30) * 40}px`,
+                          animationDelay: `${taskIndex * 0.1}s`
                         }}
                         title={`${task.title} - ${formatTime(new Date(task.startDate))}`}
+                        data-testid={`task-day-${task.id}`}
                       >
                         <div className="font-semibold">{task.title}</div>
                         <div className="text-xs opacity-90 mt-1">
