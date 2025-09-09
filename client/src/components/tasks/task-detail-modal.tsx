@@ -81,13 +81,17 @@ export default function TaskDetailModal({ task, isOpen, onClose }: TaskDetailMod
         <div className="space-y-6">
           {/* Status and Priority Badges */}
           <div className="flex flex-wrap gap-2">
-            <Badge className={getCategoryColor(task.category)}>
+            <Badge className={`task-element task-animate-enter ${getCategoryColor(task.category)}`} data-testid="badge-category">
               {task.category}
             </Badge>
-            <Badge className={getStatusColor(task.status)}>
+            <Badge className={`task-element task-animate-enter ${getStatusColor(task.status)} ${task.status === 'completed' ? 'task-completed-pulse' : task.status === 'in-progress' ? 'animate-pulse' : ''}`} 
+                   data-testid="badge-status"
+                   style={{ animationDelay: '0.1s' }}>
               {task.status}
             </Badge>
-            <Badge className={getPriorityColor(task.priority)}>
+            <Badge className={`task-element task-animate-enter ${getPriorityColor(task.priority)} ${task.priority === 'urgent' ? 'task-urgent-shake' : ''}`} 
+                   data-testid="badge-priority"
+                   style={{ animationDelay: '0.2s' }}>
               {task.priority}
             </Badge>
           </div>

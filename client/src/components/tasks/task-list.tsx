@@ -33,12 +33,21 @@ export default function TaskList() {
           </div>
         ) : (
           <div className="space-y-3">
-            {todaysTasks.map((task) => (
-              <div 
-                key={task.id} 
-                className="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
-              >
-                <div className={`w-3 h-3 rounded-full mr-3 ${getCategoryColor(task.category).replace('text-white', '').replace('bg-', 'bg-').split(' ')[0]}`}></div>
+            {todaysTasks.map((task, index) => {
+              const statusClasses = task.status === 'completed' ? 'task-completed-pulse' :
+                                  task.priority === 'urgent' ? 'task-urgent-shake' : '';
+              const glowClass = task.status === 'pending' ? 'status-glow-pending' :
+                              task.status === 'in-progress' ? 'status-glow-progress' :
+                              task.status === 'completed' ? 'status-glow-completed' : '';
+              
+              return (
+                <div 
+                  key={task.id} 
+                  className={`task-element task-animate-enter task-animate-hover ${statusClasses} ${glowClass} flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-all duration-300 ease-in-out transform-gpu cursor-pointer`}
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                  data-testid={`task-list-${task.id}`}
+                >
+                  <div className={`w-3 h-3 rounded-full mr-3 transition-all duration-300 ${getCategoryColor(task.category).replace('text-white', '').replace('bg-', 'bg-').split(' ')[0]}`}></div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <h4 className="font-medium text-gray-900">{task.title}</h4>
@@ -65,8 +74,9 @@ export default function TaskList() {
                 <Button variant="ghost" size="sm" className="ml-2">
                   <ChevronRight className="w-4 h-4" />
                 </Button>
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         )}
       </CardContent>
