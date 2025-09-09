@@ -194,9 +194,21 @@ export default function TaskModal({ isOpen, onClose }: TaskModalProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Assigned To</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Team member name" {...field} />
-                  </FormControl>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger data-testid="select-assigned-to">
+                        <SelectValue placeholder="Select team member" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="German">German</SelectItem>
+                      <SelectItem value="Marcelo">Marcelo</SelectItem>
+                      <SelectItem value="Luis">Luis</SelectItem>
+                      <SelectItem value="Jose">Jose</SelectItem>
+                      <SelectItem value="Miguel">Miguel</SelectItem>
+                      <SelectItem value="Luis(59)">Luis(59)</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
