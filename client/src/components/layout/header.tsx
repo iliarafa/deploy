@@ -2,11 +2,13 @@ import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
 import { Hammer, Plus, Bell, User } from "lucide-react";
 import TaskModal from "@/components/tasks/task-modal";
+import VacancyModal from "@/components/vacancies/vacancy-modal";
 import { useState } from "react";
 
 export default function Header() {
   const [location] = useLocation();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [isVacancyModalOpen, setIsVacancyModalOpen] = useState(false);
 
   const isActive = (path: string) => {
     if (path === "/" && location === "/") return true;
@@ -73,6 +75,13 @@ export default function Header() {
                 <Plus className="w-4 h-4 mr-2" />
                 New Task
               </Button>
+              <Button 
+                className="bg-green-800 text-white hover:bg-green-900"
+                onClick={() => setIsVacancyModalOpen(true)}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Record Vacancy
+              </Button>
               <Button variant="ghost" size="sm">
                 <Bell className="w-5 h-5 text-gray-500" />
               </Button>
@@ -87,6 +96,10 @@ export default function Header() {
       <TaskModal 
         isOpen={isTaskModalOpen} 
         onClose={() => setIsTaskModalOpen(false)} 
+      />
+      <VacancyModal 
+        isOpen={isVacancyModalOpen} 
+        onClose={() => setIsVacancyModalOpen(false)} 
       />
     </>
   );

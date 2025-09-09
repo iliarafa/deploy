@@ -234,6 +234,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Vacancy routes
+  app.get("/api/vacancies", async (req, res) => {
+    try {
+      const vacancies = await storage.getVacancies();
+      res.json(vacancies);
+    } catch (error) {
+      console.error("Error fetching vacancies:", error);
+      res.status(500).json({ message: "Failed to fetch vacancies" });
+    }
+  });
+
+  app.get("/api/vacancies/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const vacancy = await storage.getVacancy(id);
+      if (!vacancy) {
+        return res.status(404).json({ message: "Vacancy not found" });
+      }
+      res.json(vacancy);
+    } catch (error) {
+      console.error("Error fetching vacancy:", error);
+      res.status(500).json({ message: "Failed to fetch vacancy" });
+    }
+  });
+
+  app.post("/api/vacancies", async (req, res) => {
+    try {
+      const validatedData = { 
+        property: req.body.property,
+        apartmentNumber: req.body.apartmentNumber,
+        previousTenantDuration: req.body.previousTenantDuration || null,
+        images: req.body.images || [],
+        notes: req.body.notes || null,
+        status: req.body.status || "vacant"
+      };
+      const vacancy = await storage.createVacancy(validatedData);
+      
+      // Send real-time notification
+      try {
+        wsManager.broadcast("vacancy", { type: "created", vacancy });
+      } catch (notifError) {
+        console.log("Notification failed:", notifError);
+      }
+      
+      res.status(201).json(vacancy);
+    } catch (error) {
+      console.error("Error creating vacancy:", error);
+      res.status(500).json({ message: "Failed to create vacancy" });
+    }
+  });
+
+  // Object storage routes
+  app.post("/api/objects/upload", async (req, res) => {
+    try {
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error("Error getting upload URL:", error);
+      res.status(500).json({ error: "Failed to get upload URL" });
+    }
+  });
+
+  app.put("/api/vacancy-images", async (req, res) => {
+    try {
+      if (!req.body.imageURL) {
+        return res.status(400).json({ error: "imageURL is required" });
+      }
+
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorageService = new ObjectStorageService();
+      const objectPath = objectStorageService.normalizeObjectEntityPath(
+        req.body.imageURL
+      );
+
+      res.status(200).json({
+        objectPath: objectPath,
+      });
+    } catch (error) {
+      console.error("Error setting vacancy image:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -47,6 +47,17 @@ export const communications = pgTable("communications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const vacancies = pgTable("vacancies", {
+  id: serial("id").primaryKey(),
+  property: text("property").notNull(),
+  apartmentNumber: text("apartment_number").notNull(),
+  previousTenantDuration: text("previous_tenant_duration"),
+  images: text("images").array(),
+  notes: text("notes"),
+  status: text("status").notNull().default("vacant"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const tasksRelations = relations(tasks, ({ many }) => ({
   communications: many(communications),
@@ -80,6 +91,11 @@ export const insertCommunicationSchema = createInsertSchema(communications).omit
   createdAt: true,
 });
 
+export const insertVacancySchema = createInsertSchema(vacancies).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Task = typeof tasks.$inferSelect;
@@ -88,3 +104,5 @@ export type MaterialRequest = typeof materialRequests.$inferSelect;
 export type InsertMaterialRequest = z.infer<typeof insertMaterialRequestSchema>;
 export type Communication = typeof communications.$inferSelect;
 export type InsertCommunication = z.infer<typeof insertCommunicationSchema>;
+export type Vacancy = typeof vacancies.$inferSelect;
+export type InsertVacancy = z.infer<typeof insertVacancySchema>;

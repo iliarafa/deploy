@@ -3,6 +3,7 @@ import {
   tasks, 
   materialRequests, 
   communications,
+  vacancies,
   type User, 
   type InsertUser,
   type Task,
@@ -10,7 +11,9 @@ import {
   type MaterialRequest,
   type InsertMaterialRequest,
   type Communication,
-  type InsertCommunication
+  type InsertCommunication,
+  type Vacancy,
+  type InsertVacancy
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte } from "drizzle-orm";
@@ -40,6 +43,13 @@ export interface IStorage {
   getCommunications(): Promise<Communication[]>;
   getCommunicationsByTask(taskId: number): Promise<Communication[]>;
   createCommunication(communication: InsertCommunication): Promise<Communication>;
+  
+  // Vacancy operations
+  getVacancies(): Promise<Vacancy[]>;
+  getVacancy(id: number): Promise<Vacancy | undefined>;
+  createVacancy(vacancy: InsertVacancy): Promise<Vacancy>;
+  updateVacancy(id: number, updates: Partial<InsertVacancy>): Promise<Vacancy>;
+  deleteVacancy(id: number): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -47,20 +57,24 @@ export class MemStorage implements IStorage {
   private tasks: Map<number, Task>;
   private materialRequests: Map<number, MaterialRequest>;
   private communications: Map<number, Communication>;
+  private vacancies: Map<number, Vacancy>;
   private currentUserId: number;
   private currentTaskId: number;
   private currentMaterialRequestId: number;
   private currentCommunicationId: number;
+  private currentVacancyId: number;
 
   constructor() {
     this.users = new Map();
     this.tasks = new Map();
     this.materialRequests = new Map();
     this.communications = new Map();
+    this.vacancies = new Map();
     this.currentUserId = 1;
     this.currentTaskId = 1;
     this.currentMaterialRequestId = 1;
     this.currentCommunicationId = 1;
+    this.currentVacancyId = 1;
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -183,6 +197,35 @@ export class MemStorage implements IStorage {
     this.communications.set(id, communication);
     return communication;
   }
+
+  async getVacancies(): Promise<Vacancy[]> {
+    return Array.from(this.vacancies.values());
+  }
+
+  async getVacancy(id: number): Promise<Vacancy | undefined> {
+    return this.vacancies.get(id);
+  }
+
+  async createVacancy(insertVacancy: InsertVacancy): Promise<Vacancy> {
+    const id = this.currentVacancyId++;
+    const vacancy: Vacancy = { ...insertVacancy, id, createdAt: new Date() };
+    this.vacancies.set(id, vacancy);
+    return vacancy;
+  }
+
+  async updateVacancy(id: number, updates: Partial<InsertVacancy>): Promise<Vacancy> {
+    const existingVacancy = this.vacancies.get(id);
+    if (!existingVacancy) {
+      throw new Error(`Vacancy with id ${id} not found`);
+    }
+    const updatedVacancy = { ...existingVacancy, ...updates };
+    this.vacancies.set(id, updatedVacancy);
+    return updatedVacancy;
+  }
+
+  async deleteVacancy(id: number): Promise<void> {
+    this.vacancies.delete(id);
+  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -291,6 +334,36 @@ export class DatabaseStorage implements IStorage {
       .values(insertCommunication)
       .returning();
     return communication;
+  }
+
+  async getVacancies(): Promise<Vacancy[]> {
+    return await db.select().from(vacancies);
+  }
+
+  async getVacancy(id: number): Promise<Vacancy | undefined> {
+    const [vacancy] = await db.select().from(vacancies).where(eq(vacancies.id, id));
+    return vacancy || undefined;
+  }
+
+  async createVacancy(insertVacancy: InsertVacancy): Promise<Vacancy> {
+    const [vacancy] = await db
+      .insert(vacancies)
+      .values(insertVacancy)
+      .returning();
+    return vacancy;
+  }
+
+  async updateVacancy(id: number, updates: Partial<InsertVacancy>): Promise<Vacancy> {
+    const [vacancy] = await db
+      .update(vacancies)
+      .set(updates)
+      .where(eq(vacancies.id, id))
+      .returning();
+    return vacancy;
+  }
+
+  async deleteVacancy(id: number): Promise<void> {
+    await db.delete(vacancies).where(eq(vacancies.id, id));
   }
 }
 
