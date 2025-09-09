@@ -1,12 +1,24 @@
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
-import { Hammer, Plus, Bell, User } from "lucide-react";
+import { Hammer, Plus, Bell, User, LogOut, Settings } from "lucide-react";
 import TaskModal from "@/components/tasks/task-modal";
+import { LoginModal } from "@/components/auth/login-modal";
+import { useAuth } from "@/contexts/auth-context";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useState } from "react";
 
 export default function Header() {
   const [location] = useLocation();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const { user, isAuthenticated, logout, hasPermission } = useAuth();
 
   const isActive = (path: string) => {
     if (path === "/" && location === "/") return true;
@@ -26,59 +38,114 @@ export default function Header() {
               </div>
             </div>
             
+            {/* Role-based Navigation */}
             <nav className="hidden md:flex space-x-8">
               <Link href="/">
-                <a className={`font-medium pb-2 ${
+                <span className={`font-medium pb-2 cursor-pointer ${
                   isActive("/") 
                     ? "text-primary border-b-2 border-primary" 
                     : "text-gray-500 hover:text-gray-700"
                 }`}>
                   Calendar
-                </a>
+                </span>
               </Link>
-              <Link href="/tasks">
-                <a className={`font-medium pb-2 ${
-                  isActive("/tasks") 
-                    ? "text-primary border-b-2 border-primary" 
-                    : "text-gray-500 hover:text-gray-700"
-                }`}>
-                  Tasks
-                </a>
-              </Link>
-              <Link href="/materials">
-                <a className={`font-medium pb-2 ${
-                  isActive("/materials") 
-                    ? "text-primary border-b-2 border-primary" 
-                    : "text-gray-500 hover:text-gray-700"
-                }`}>
-                  Materials
-                </a>
-              </Link>
-              <Link href="/reports">
-                <a className={`font-medium pb-2 ${
-                  isActive("/reports") 
-                    ? "text-primary border-b-2 border-primary" 
-                    : "text-gray-500 hover:text-gray-700"
-                }`}>
-                  Reports
-                </a>
-              </Link>
+              
+              {user && hasPermission('view_all_tasks') && (
+                <Link href="/tasks">
+                  <span className={`font-medium pb-2 cursor-pointer ${
+                    isActive("/tasks") 
+                      ? "text-primary border-b-2 border-primary" 
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}>
+                    Tasks
+                  </span>
+                </Link>
+              )}
+              
+              {user && hasPermission('view_all_materials') && (
+                <Link href="/materials">
+                  <span className={`font-medium pb-2 cursor-pointer ${
+                    isActive("/materials") 
+                      ? "text-primary border-b-2 border-primary" 
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}>
+                    Materials
+                  </span>
+                </Link>
+              )}
+              
+              {user && hasPermission('view_reports') && (
+                <Link href="/reports">
+                  <span className={`font-medium pb-2 cursor-pointer ${
+                    isActive("/reports") 
+                      ? "text-primary border-b-2 border-primary" 
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}>
+                    Reports
+                  </span>
+                </Link>
+              )}
             </nav>
 
             <div className="flex items-center space-x-4">
-              <Button 
-                className="bg-primary text-white hover:bg-blue-700"
-                onClick={() => setIsTaskModalOpen(true)}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                New Task
-              </Button>
-              <Button variant="ghost" size="sm">
-                <Bell className="w-5 h-5 text-gray-500" />
-              </Button>
-              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                <User className="w-4 h-4 text-gray-600" />
-              </div>
+              {/* Role-based Action Buttons */}
+              {user && hasPermission('create_task') && (
+                <Button 
+                  className="bg-primary text-white hover:bg-blue-700"
+                  onClick={() => setIsTaskModalOpen(true)}
+                  data-testid="button-new-task"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Task
+                </Button>
+              )}
+              
+              {user && (
+                <Button variant="ghost" size="sm" data-testid="button-notifications">
+                  <Bell className="w-5 h-5 text-gray-500" />
+                </Button>
+              )}
+              
+              {/* User Menu or Login Button */}
+              {isAuthenticated && user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="flex items-center space-x-2" data-testid="button-user-menu">
+                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                        <User className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="hidden md:flex flex-col items-start">
+                        <span className="text-sm font-medium text-gray-900">{user.username}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {user.role.replace('_', ' ')}
+                        </Badge>
+                      </div>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem data-testid="menu-profile">
+                      <User className="w-4 h-4 mr-2" />
+                      Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuItem data-testid="menu-settings">
+                      <Settings className="w-4 h-4 mr-2" />
+                      Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={logout} data-testid="menu-logout">
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button 
+                  onClick={() => setIsLoginModalOpen(true)}
+                  data-testid="button-login"
+                >
+                  Login
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -87,6 +154,11 @@ export default function Header() {
       <TaskModal 
         isOpen={isTaskModalOpen} 
         onClose={() => setIsTaskModalOpen(false)} 
+      />
+      
+      <LoginModal 
+        open={isLoginModalOpen}
+        onOpenChange={setIsLoginModalOpen}
       />
     </>
   );
