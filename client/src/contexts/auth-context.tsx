@@ -53,8 +53,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (storedUser && sessionToken) {
           // Verify session is still valid by making an API call
           try {
-            const response = await apiRequest('GET', '/api/auth/user', undefined, {
-              'session-token': sessionToken
+            const response = await fetch('/api/auth/user', {
+              method: 'GET',
+              headers: {
+                'session-token': sessionToken,
+                'Content-Type': 'application/json'
+              }
             });
             
             if (response.ok) {
@@ -123,8 +127,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const sessionToken = localStorage.getItem('auth_session');
       if (sessionToken) {
-        await apiRequest('POST', '/api/auth/logout', undefined, {
-          'session-token': sessionToken
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'session-token': sessionToken,
+            'Content-Type': 'application/json'
+          }
         });
       }
     } catch (error) {

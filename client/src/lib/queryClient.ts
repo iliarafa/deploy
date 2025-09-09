@@ -18,12 +18,12 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const user = getCurrentUser();
-  const headers: HeadersInit = data ? { "Content-Type": "application/json" } : {};
+  const sessionToken = localStorage.getItem('auth_session');
+  const headers: HeadersInit = { "Content-Type": "application/json" };
   
-  // Add user-id header for authentication
-  if (user) {
-    headers['user-id'] = user.id.toString();
+  // Add session-token header for authentication
+  if (sessionToken) {
+    headers['session-token'] = sessionToken;
   }
 
   const res = await fetch(url, {
@@ -43,12 +43,12 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const user = getCurrentUser();
+    const sessionToken = localStorage.getItem('auth_session');
     const headers: HeadersInit = {};
     
-    // Add user-id header for authentication
-    if (user) {
-      headers['user-id'] = user.id.toString();
+    // Add session-token header for authentication
+    if (sessionToken) {
+      headers['session-token'] = sessionToken;
     }
 
     const res = await fetch(queryKey.join("/") as string, {
