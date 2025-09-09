@@ -7,14 +7,28 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+// Helper function to get user from localStorage
+const getCurrentUser = () => {
+  const storedUser = localStorage.getItem('auth_user');
+  return storedUser ? JSON.parse(storedUser) : null;
+};
+
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  const user = getCurrentUser();
+  const headers: HeadersInit = data ? { "Content-Type": "application/json" } : {};
+  
+  // Add user-id header for authentication
+  if (user) {
+    headers['user-id'] = user.id.toString();
+  }
+
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -29,7 +43,16 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    const user = getCurrentUser();
+    const headers: HeadersInit = {};
+    
+    // Add user-id header for authentication
+    if (user) {
+      headers['user-id'] = user.id.toString();
+    }
+
     const res = await fetch(queryKey.join("/") as string, {
+      headers,
       credentials: "include",
     });
 
