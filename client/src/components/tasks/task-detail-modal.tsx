@@ -2,9 +2,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { type Task } from "@shared/schema";
-import { Calendar, MapPin, User, Clock, X } from "lucide-react";
+import { Calendar, MapPin, User, Clock, X, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/date-utils";
 import { getCategoryColor } from "@/lib/calendar-utils";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface TaskDetailModalProps {
   task: Task | null;
@@ -13,6 +16,36 @@ interface TaskDetailModalProps {
 }
 
 export default function TaskDetailModal({ task, isOpen, onClose }: TaskDetailModalProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (taskId: number) => {
+      return apiRequest("DELETE", `/api/tasks/${taskId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({
+        title: "Success",
+        description: "Task deleted successfully",
+      });
+      onClose();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to delete task",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteTask = () => {
+    if (task && window.confirm("Are you sure you want to delete this task? This action cannot be undone.")) {
+      deleteTaskMutation.mutate(task.id);
+    }
+  };
+
   if (!task) return null;
 
   const getStatusColor = (status: string) => {
@@ -121,6 +154,22 @@ export default function TaskDetailModal({ task, isOpen, onClose }: TaskDetailMod
               Created: {new Date(task.createdAt).toLocaleDateString()} at {new Date(task.createdAt).toLocaleTimeString()}
             </div>
           )}
+
+          {/* Action Buttons */}
+          <div className="flex justify-end space-x-3 border-t pt-4">
+            <Button variant="outline" onClick={onClose}>
+              Close
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={handleDeleteTask}
+              disabled={deleteTaskMutation.isPending}
+              data-testid="button-delete-task"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {deleteTaskMutation.isPending ? "Deleting..." : "Delete Task"}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
