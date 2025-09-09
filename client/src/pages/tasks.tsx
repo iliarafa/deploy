@@ -1,5 +1,6 @@
 import Header from "@/components/layout/header";
 import MobileNav from "@/components/layout/mobile-nav";
+import TaskDetailModal from "@/components/tasks/task-detail-modal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,8 @@ export default function Tasks() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
@@ -167,7 +170,14 @@ export default function Tasks() {
                         </Badge>
                       </div>
                       
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          setSelectedTask(task);
+                          setIsDetailModalOpen(true);
+                        }}
+                      >
                         View Details
                       </Button>
                     </div>
@@ -178,6 +188,15 @@ export default function Tasks() {
           )}
         </div>
       </main>
+
+      <TaskDetailModal 
+        task={selectedTask}
+        isOpen={isDetailModalOpen}
+        onClose={() => {
+          setIsDetailModalOpen(false);
+          setSelectedTask(null);
+        }}
+      />
     </div>
   );
 }
