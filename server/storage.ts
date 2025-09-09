@@ -95,24 +95,78 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.currentUserId++;
-    const user: User = { ...insertUser, id };
+    const user: User = { 
+      ...insertUser, 
+      id,
+      role: insertUser.role || "worker",
+      permissions: insertUser.permissions || [],
+      isActive: insertUser.isActive !== false,
+      createdAt: new Date()
+    };
     this.users.set(id, user);
     return user;
   }
 
-  async getTasks(): Promise<Task[]> {
-    return Array.from(this.tasks.values());
+  async updateUser(id: number, updates: Partial<InsertUser>): Promise<User> {
+    const existingUser = this.users.get(id);
+    if (!existingUser) {
+      throw new Error(`User with id ${id} not found`);
+    }
+    const updatedUser = { ...existingUser, ...updates };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+
+  async getUsers(): Promise<User[]> {
+    return Array.from(this.users.values()).filter(user => user.isActive);
+  }
+
+  async checkUserPermission(userId: number, permission: Permission): Promise<boolean> {
+    const user = await this.getUser(userId);
+    if (!user) return false;
+    
+    const userPermissions = getUserPermissions(user.role as UserRole, user.permissions as Permission[]);
+    return hasPermission(userPermissions, permission);
+  }
+
+  async getTasks(userId?: number, userRole?: UserRole): Promise<Task[]> {
+    const allTasks = Array.from(this.tasks.values());
+    
+    if (!userRole) {
+      return allTasks;
+    }
+
+    // Filter tasks based on user role
+    if (userRole === 'worker' && userId) {
+      // Workers can only see tasks assigned to them
+      return allTasks.filter(task => task.assignedTo === userId.toString());
+    }
+    
+    // Admin, project_manager, supervisor, inspector, client can see all tasks
+    return allTasks;
   }
 
   async getTask(id: number): Promise<Task | undefined> {
     return this.tasks.get(id);
   }
 
-  async getTasksByDateRange(startDate: Date, endDate: Date): Promise<Task[]> {
-    return Array.from(this.tasks.values()).filter(task => {
+  async getTasksByDateRange(startDate: Date, endDate: Date, userId?: number, userRole?: UserRole): Promise<Task[]> {
+    let filteredTasks = Array.from(this.tasks.values()).filter(task => {
       const taskDate = new Date(task.startDate);
       return taskDate >= startDate && taskDate <= endDate;
     });
+
+    if (!userRole) {
+      return filteredTasks;
+    }
+
+    // Filter tasks based on user role
+    if (userRole === 'worker' && userId) {
+      // Workers can only see tasks assigned to them
+      filteredTasks = filteredTasks.filter(task => task.assignedTo === userId.toString());
+    }
+
+    return filteredTasks;
   }
 
   async createTask(insertTask: InsertTask): Promise<Task> {
@@ -146,8 +200,16 @@ export class MemStorage implements IStorage {
     this.tasks.delete(id);
   }
 
-  async getMaterialRequests(): Promise<MaterialRequest[]> {
-    return Array.from(this.materialRequests.values());
+  async getMaterialRequests(userId?: number, userRole?: UserRole): Promise<MaterialRequest[]> {
+    const allRequests = Array.from(this.materialRequests.values());
+    
+    if (!userRole) {
+      return allRequests;
+    }
+
+    // For now, all roles can see all material requests
+    // In a full implementation, you'd track who created the request
+    return allRequests;
   }
 
   async getMaterialRequest(id: number): Promise<MaterialRequest | undefined> {
@@ -204,8 +266,18 @@ export class MemStorage implements IStorage {
     return communication;
   }
 
-  async getVacancies(): Promise<Vacancy[]> {
-    return Array.from(this.vacancies.values());
+  async getVacancies(userRole?: UserRole): Promise<Vacancy[]> {
+    if (!userRole) {
+      return Array.from(this.vacancies.values());
+    }
+
+    // Only admin and project managers can access vacancy records
+    if (userRole === 'admin' || userRole === 'project_manager') {
+      return Array.from(this.vacancies.values());
+    }
+
+    // Other roles get empty array (no access)
+    return [];
   }
 
   async getVacancy(id: number): Promise<Vacancy | undefined> {
@@ -316,7 +388,10 @@ export class DatabaseStorage implements IStorage {
 
     // Filter tasks based on user role
     if (userRole === 'worker' && userId) {
-      return await baseQuery.where(
+      return await db
+      .select()
+      .from(tasks)
+      .where(
         and(
           gte(tasks.startDate, startDate),
           lte(tasks.startDate, endDate),

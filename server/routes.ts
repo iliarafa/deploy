@@ -5,12 +5,22 @@ import { insertTaskSchema, insertMaterialRequestSchema, insertCommunicationSchem
 import { z } from "zod";
 import { wsManager } from "./websocket";
 import { sendTaskNotification, sendMaterialRequestNotification } from "./email";
+import { 
+  authenticate, 
+  requirePermission, 
+  requireRole, 
+  canAccessResource, 
+  addUserContext 
+} from "./auth-middleware";
+import { type UserRole } from "@shared/roles";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Task routes
-  app.get("/api/tasks", async (req, res) => {
+  // Task routes with authorization
+  app.get("/api/tasks", authenticate, canAccessResource('task'), addUserContext, async (req, res) => {
     try {
-      const tasks = await storage.getTasks();
+      const userId = parseInt(req.query.userId as string);
+      const userRole = req.query.userRole as UserRole;
+      const tasks = await storage.getTasks(userId, userRole);
       res.json(tasks);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch tasks" });
@@ -30,16 +40,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/tasks/date-range", async (req, res) => {
+  app.get("/api/tasks/date-range", authenticate, canAccessResource('task'), addUserContext, async (req, res) => {
     try {
-      const { startDate, endDate } = req.query;
+      const { startDate, endDate, userId, userRole } = req.query;
       if (!startDate || !endDate) {
         return res.status(400).json({ message: "Start date and end date are required" });
       }
       
       const tasks = await storage.getTasksByDateRange(
         new Date(startDate as string),
-        new Date(endDate as string)
+        new Date(endDate as string),
+        userId ? parseInt(userId as string) : undefined,
+        userRole as UserRole
       );
       res.json(tasks);
     } catch (error) {
@@ -47,7 +59,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/tasks", async (req, res) => {
+  app.post("/api/tasks", authenticate, requirePermission('create_task'), async (req, res) => {
     try {
       // Convert date fields from strings to Date objects if needed
       const taskData = {
@@ -90,7 +102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/tasks/:id", async (req, res) => {
+  app.put("/api/tasks/:id", authenticate, requirePermission('edit_task'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const validatedData = insertTaskSchema.partial().parse(req.body);
@@ -107,7 +119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/tasks/:id", async (req, res) => {
+  app.delete("/api/tasks/:id", authenticate, requirePermission('delete_task'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteTask(id);
@@ -117,10 +129,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Material request routes
-  app.get("/api/material-requests", async (req, res) => {
+  // Material request routes with authorization
+  app.get("/api/material-requests", authenticate, canAccessResource('material'), addUserContext, async (req, res) => {
     try {
-      const requests = await storage.getMaterialRequests();
+      const userId = parseInt(req.query.userId as string);
+      const userRole = req.query.userRole as UserRole;
+      const requests = await storage.getMaterialRequests(userId, userRole);
       res.json(requests);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch material requests" });
