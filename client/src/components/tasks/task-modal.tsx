@@ -239,10 +239,10 @@ export default function TaskModal({ isOpen, onClose }: TaskModalProps) {
                     <SelectContent>
                       <SelectItem value="German">German</SelectItem>
                       <SelectItem value="Marcelo">Marcelo</SelectItem>
-                      <SelectItem value="Luis">Luis</SelectItem>
+                      <SelectItem value="Luis C">Luis C</SelectItem>
                       <SelectItem value="Jose">Jose</SelectItem>
                       <SelectItem value="Miguel">Miguel</SelectItem>
-                      <SelectItem value="Luis(59)">Luis(59)</SelectItem>
+                      <SelectItem value="Luis G">Luis G</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
