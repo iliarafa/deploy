@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
@@ -21,6 +22,7 @@ interface TaskModalProps {
 const taskFormSchema = insertTaskSchema.extend({
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().optional(),
+  multiDay: z.boolean().optional(),
 });
 
 type TaskFormData = z.infer<typeof taskFormSchema>;
@@ -41,6 +43,7 @@ export default function TaskModal({ isOpen, onClose }: TaskModalProps) {
       assignedTo: "",
       startDate: "",
       endDate: "",
+      multiDay: false,
     },
   });
 
@@ -170,6 +173,27 @@ export default function TaskModal({ isOpen, onClose }: TaskModalProps) {
                     <Input type="datetime-local" {...field} />
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="multiDay"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      data-testid="checkbox-multi-day"
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>
+                      multi-day
+                    </FormLabel>
+                  </div>
                 </FormItem>
               )}
             />
