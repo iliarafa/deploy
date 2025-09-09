@@ -8,6 +8,10 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   email: text("email").notNull(),
+  role: text("role").notNull().default("worker"),
+  permissions: text("permissions").array().default([]),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const tasks = pgTable("tasks", {
