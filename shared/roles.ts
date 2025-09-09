@@ -117,7 +117,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
 // Helper functions for role management
 export function getUserPermissions(role: UserRole, customPermissions: Permission[] = []): Permission[] {
   const defaultPermissions = ROLE_PERMISSIONS[role] || [];
-  return [...new Set([...defaultPermissions, ...customPermissions])];
+  return Array.from(new Set([...defaultPermissions, ...customPermissions]));
 }
 
 export function hasPermission(userPermissions: Permission[], requiredPermission: Permission): boolean {

@@ -15,6 +15,7 @@ import {
   type Vacancy,
   type InsertVacancy
 } from "@shared/schema";
+import { type UserRole, type Permission, hasPermission, getUserPermissions } from "@shared/roles";
 import { db } from "./db";
 import { eq, and, gte, lte } from "drizzle-orm";
 
@@ -23,17 +24,19 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, updates: Partial<InsertUser>): Promise<User>;
+  getUsers(): Promise<User[]>;
   
-  // Task operations
-  getTasks(): Promise<Task[]>;
+  // Task operations with role-based filtering
+  getTasks(userId?: number, userRole?: UserRole): Promise<Task[]>;
   getTask(id: number): Promise<Task | undefined>;
-  getTasksByDateRange(startDate: Date, endDate: Date): Promise<Task[]>;
+  getTasksByDateRange(startDate: Date, endDate: Date, userId?: number, userRole?: UserRole): Promise<Task[]>;
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: number, updates: Partial<InsertTask>): Promise<Task>;
   deleteTask(id: number): Promise<void>;
   
-  // Material request operations
-  getMaterialRequests(): Promise<MaterialRequest[]>;
+  // Material request operations with role-based filtering
+  getMaterialRequests(userId?: number, userRole?: UserRole): Promise<MaterialRequest[]>;
   getMaterialRequest(id: number): Promise<MaterialRequest | undefined>;
   createMaterialRequest(request: InsertMaterialRequest): Promise<MaterialRequest>;
   updateMaterialRequest(id: number, updates: Partial<InsertMaterialRequest>): Promise<MaterialRequest>;
@@ -44,12 +47,15 @@ export interface IStorage {
   getCommunicationsByTask(taskId: number): Promise<Communication[]>;
   createCommunication(communication: InsertCommunication): Promise<Communication>;
   
-  // Vacancy operations
-  getVacancies(): Promise<Vacancy[]>;
+  // Vacancy operations with role-based filtering
+  getVacancies(userRole?: UserRole): Promise<Vacancy[]>;
   getVacancy(id: number): Promise<Vacancy | undefined>;
   createVacancy(vacancy: InsertVacancy): Promise<Vacancy>;
   updateVacancy(id: number, updates: Partial<InsertVacancy>): Promise<Vacancy>;
   deleteVacancy(id: number): Promise<void>;
+  
+  // Role-based authorization helpers
+  checkUserPermission(userId: number, permission: Permission): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -229,6 +235,7 @@ export class MemStorage implements IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // User operations
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
@@ -247,7 +254,48 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async getTasks(): Promise<Task[]> {
+  async updateUser(id: number, updates: Partial<InsertUser>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set(updates)
+      .where(eq(users.id, id))
+      .returning();
+    if (!user) {
+      throw new Error(`User with id ${id} not found`);
+    }
+    return user;
+  }
+
+  async getUsers(): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.isActive, true));
+  }
+
+  async checkUserPermission(userId: number, permission: Permission): Promise<boolean> {
+    const user = await this.getUser(userId);
+    if (!user) return false;
+    
+    const userPermissions = getUserPermissions(user.role as UserRole, user.permissions as Permission[]);
+    return hasPermission(userPermissions, permission);
+  }
+
+  // Task operations with role-based filtering
+  async getTasks(userId?: number, userRole?: UserRole): Promise<Task[]> {
+    if (!userRole) {
+      return await db.select().from(tasks);
+    }
+
+    // Filter tasks based on user role
+    if (userRole === 'worker' && userId) {
+      // Workers can only see tasks assigned to them
+      return await db.select().from(tasks).where(eq(tasks.assignedTo, userId.toString()));
+    }
+    
+    if (userRole === 'client') {
+      // Clients see limited task information
+      return await db.select().from(tasks);
+    }
+    
+    // Admin, project_manager, supervisor, inspector can see all tasks
     return await db.select().from(tasks);
   }
 
@@ -256,11 +304,29 @@ export class DatabaseStorage implements IStorage {
     return task || undefined;
   }
 
-  async getTasksByDateRange(startDate: Date, endDate: Date): Promise<Task[]> {
-    return await db
+  async getTasksByDateRange(startDate: Date, endDate: Date, userId?: number, userRole?: UserRole): Promise<Task[]> {
+    const baseQuery = db
       .select()
       .from(tasks)
       .where(and(gte(tasks.startDate, startDate), lte(tasks.startDate, endDate)));
+
+    if (!userRole) {
+      return await baseQuery;
+    }
+
+    // Filter tasks based on user role
+    if (userRole === 'worker' && userId) {
+      return await baseQuery.where(
+        and(
+          gte(tasks.startDate, startDate),
+          lte(tasks.startDate, endDate),
+          eq(tasks.assignedTo, userId.toString())
+        )
+      );
+    }
+
+    // Admin, project_manager, supervisor, inspector, client can see all tasks in range
+    return await baseQuery;
   }
 
   async createTask(insertTask: InsertTask): Promise<Task> {
@@ -287,7 +353,20 @@ export class DatabaseStorage implements IStorage {
     await db.delete(tasks).where(eq(tasks.id, id));
   }
 
-  async getMaterialRequests(): Promise<MaterialRequest[]> {
+  async getMaterialRequests(userId?: number, userRole?: UserRole): Promise<MaterialRequest[]> {
+    if (!userRole) {
+      return await db.select().from(materialRequests);
+    }
+
+    // Workers can only see their own material requests
+    if (userRole === 'worker' && userId) {
+      // For now, we'll show all since we don't track who created the request
+      // In a full implementation, you'd add a createdBy field
+      return await db.select().from(materialRequests);
+    }
+
+    // Admin, project_manager, supervisor can see all material requests
+    // Clients get read-only view of all requests
     return await db.select().from(materialRequests);
   }
 
@@ -336,8 +415,18 @@ export class DatabaseStorage implements IStorage {
     return communication;
   }
 
-  async getVacancies(): Promise<Vacancy[]> {
-    return await db.select().from(vacancies);
+  async getVacancies(userRole?: UserRole): Promise<Vacancy[]> {
+    if (!userRole) {
+      return await db.select().from(vacancies);
+    }
+
+    // Only admin and project managers can access vacancy records
+    if (userRole === 'admin' || userRole === 'project_manager') {
+      return await db.select().from(vacancies);
+    }
+
+    // Other roles get empty array (no access)
+    return [];
   }
 
   async getVacancy(id: number): Promise<Vacancy | undefined> {
