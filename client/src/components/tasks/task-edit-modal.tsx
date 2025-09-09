@@ -230,7 +230,6 @@ export default function TaskEditModal({ task, isOpen, onClose }: TaskEditModalPr
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">No specific location</SelectItem>
                           <SelectItem value="43">Location 43</SelectItem>
                           <SelectItem value="44">Location 44</SelectItem>
                           <SelectItem value="45">Location 45</SelectItem>
@@ -257,7 +256,6 @@ export default function TaskEditModal({ task, isOpen, onClose }: TaskEditModalPr
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Unassigned</SelectItem>
                           {users.map((user: any) => (
                             <SelectItem key={user.id} value={user.username}>
                               {user.firstName && user.lastName 
