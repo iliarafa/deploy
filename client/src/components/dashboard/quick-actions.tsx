@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Package, ClipboardCheck, AlertTriangle } from "lucide-react";
+import { Plus, Package, ClipboardCheck, AlertTriangle, Home } from "lucide-react";
 import { useState } from "react";
 import TaskModal from "@/components/tasks/task-modal";
 import MaterialRequestModal from "@/components/materials/material-request-modal";
@@ -41,6 +41,14 @@ export default function QuickActions() {
             >
               <ClipboardCheck className="w-4 h-4 mr-3" />
               Schedule Inspection
+            </Button>
+            
+            <Button 
+              className="w-full justify-start bg-green-800 hover:bg-green-900 text-white"
+              onClick={() => {/* TODO: Implement vacancy */}}
+            >
+              <Home className="w-4 h-4 mr-3" />
+              Vacancy
             </Button>
             
             <Button 
