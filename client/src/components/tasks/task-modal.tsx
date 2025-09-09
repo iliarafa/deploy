@@ -204,9 +204,21 @@ export default function TaskModal({ isOpen, onClose }: TaskModalProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Location</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Building, floor, room" {...field} />
-                  </FormControl>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger data-testid="select-location">
+                        <SelectValue placeholder="Select location" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="43">43</SelectItem>
+                      <SelectItem value="44">44</SelectItem>
+                      <SelectItem value="45">45</SelectItem>
+                      <SelectItem value="51">51</SelectItem>
+                      <SelectItem value="59">59</SelectItem>
+                      <SelectItem value="60">60</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
