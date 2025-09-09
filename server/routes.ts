@@ -23,6 +23,90 @@ import { type UserRole } from "@shared/roles";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
+  // Authentication routes
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ message: "Username and password are required" });
+      }
+      
+      // Get user by username
+      const user = await storage.getUserByUsername(username);
+      
+      if (!user) {
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+      
+      // Check if user is approved and active
+      if (!user.isApproved) {
+        return res.status(401).json({ message: "Account pending approval. Please contact an administrator." });
+      }
+      
+      if (!user.isActive) {
+        return res.status(401).json({ message: "Account has been deactivated. Please contact an administrator." });
+      }
+      
+      // TODO: Verify password - for now allowing demo accounts
+      const isDemoAccount = ['admin', 'manager', 'worker'].includes(username);
+      if (isDemoAccount) {
+        // Create session
+        const sessionExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+        const session = await storage.createSession(user.id, sessionExpiry);
+        
+        // Update last login
+        await storage.updateUser(user.id, { lastLogin: new Date() });
+        
+        // Remove password from response
+        const { password: _, ...safeUser } = user;
+        
+        res.json({
+          user: safeUser,
+          sessionToken: session.sessionToken
+        });
+      } else {
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  app.post("/api/auth/logout", authenticate, async (req, res) => {
+    try {
+      const sessionToken = req.headers['session-token'] as string;
+      if (sessionToken) {
+        await storage.deleteSession(sessionToken);
+      }
+      res.json({ message: "Logged out successfully" });
+    } catch (error) {
+      console.error("Logout error:", error);
+      res.status(500).json({ message: "Logout failed" });
+    }
+  });
+
+  app.get("/api/auth/user", authenticate, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const { password, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({ message: "Failed to get user information" });
+    }
+  });
+  
   // User registration routes
   app.post("/api/register", async (req, res) => {
     try {
