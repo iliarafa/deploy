@@ -15,16 +15,25 @@ declare global {
   }
 }
 
-// Mock authentication middleware - replace with your actual auth system
+// Session-based authentication middleware
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // For demo purposes, we'll use a hardcoded user
-    // In production, extract user ID from JWT token, session, etc.
-    const userId = parseInt(req.headers['user-id'] as string) || 1;
+    const sessionToken = req.headers['session-token'] as string || req.headers['authorization']?.replace('Bearer ', '');
     
-    const user = await storage.getUser(userId);
-    if (!user || !user.isActive) {
+    if (!sessionToken) {
       return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Verify session token
+    const session = await storage.getValidSession(sessionToken);
+    if (!session) {
+      return res.status(401).json({ error: 'Invalid or expired session' });
+    }
+
+    // Get user details
+    const user = await storage.getUser(session.userId);
+    if (!user || !user.isApproved || !user.isActive) {
+      return res.status(401).json({ error: 'User not authorized' });
     }
 
     req.user = {
@@ -32,11 +41,11 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       role: user.role as UserRole,
       permissions: getUserPermissions(user.role as UserRole, user.permissions as Permission[])
     };
-
+    
     next();
   } catch (error) {
     console.error('Authentication error:', error);
-    res.status(500).json({ error: 'Authentication failed' });
+    res.status(401).json({ error: 'Authentication failed' });
   }
 };
 

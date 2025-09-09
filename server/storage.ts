@@ -65,6 +65,7 @@ export interface IStorage {
   // Session management
   createSession(userId: number, expiresAt: Date): Promise<UserSession>;
   getSessionByToken(token: string): Promise<UserSession | undefined>;
+  getValidSession(token: string): Promise<UserSession | undefined>;
   deleteSession(token: string): Promise<void>;
   cleanExpiredSessions(): Promise<void>;
   
@@ -280,6 +281,10 @@ export class MemStorage implements IStorage {
       return session;
     }
     return undefined;
+  }
+
+  async getValidSession(token: string): Promise<UserSession | undefined> {
+    return this.getSessionByToken(token);
   }
 
   async deleteSession(token: string): Promise<void> {
@@ -642,6 +647,10 @@ export class DatabaseStorage implements IStorage {
         gte(userSessions.expiresAt, new Date())
       ));
     return session || undefined;
+  }
+
+  async getValidSession(token: string): Promise<UserSession | undefined> {
+    return this.getSessionByToken(token);
   }
 
   async deleteSession(token: string): Promise<void> {

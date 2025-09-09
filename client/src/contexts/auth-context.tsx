@@ -1,13 +1,17 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { type UserRole, type Permission, getUserPermissions, hasPermission } from '@shared/roles';
+import { apiRequest } from '@/lib/queryClient';
 
 interface User {
   id: number;
   username: string;
   email: string;
+  firstName?: string;
+  lastName?: string;
   role: UserRole;
   permissions: Permission[];
   isActive: boolean;
+  isApproved: boolean;
 }
 
 interface AuthContextType {
@@ -15,7 +19,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   hasPermission: (permission: Permission) => boolean;
   canAccessRoute: (route: string) => boolean;
   setUser: (user: User) => void;
@@ -39,31 +43,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize user from localStorage or API
+  // Initialize user from localStorage and verify session
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // For demo purposes, we'll create a default admin user
-        // In production, this would check for stored tokens/session
         const storedUser = localStorage.getItem('auth_user');
-        if (storedUser) {
-          const userData = JSON.parse(storedUser);
-          setUser({
-            ...userData,
-            permissions: getUserPermissions(userData.role, userData.permissions || [])
-          });
-        } else {
-          // Create a default admin user for testing
-          const defaultUser: User = {
-            id: 1,
-            username: 'admin',
-            email: 'admin@buildsync.com',
-            role: 'admin',
-            permissions: getUserPermissions('admin'),
-            isActive: true
-          };
-          setUser(defaultUser);
-          localStorage.setItem('auth_user', JSON.stringify(defaultUser));
+        const sessionToken = localStorage.getItem('auth_session');
+        
+        if (storedUser && sessionToken) {
+          // Verify session is still valid by making an API call
+          try {
+            const response = await apiRequest('GET', '/api/auth/user', undefined, {
+              'session-token': sessionToken
+            });
+            
+            if (response.ok) {
+              const userData = await response.json();
+              const userWithPermissions = {
+                ...userData,
+                permissions: getUserPermissions(userData.role as UserRole, userData.permissions || [])
+              };
+              setUser(userWithPermissions);
+            } else {
+              // Session invalid, clear storage
+              localStorage.removeItem('auth_user');
+              localStorage.removeItem('auth_session');
+            }
+          } catch (error) {
+            console.error('Session verification failed:', error);
+            localStorage.removeItem('auth_user');
+            localStorage.removeItem('auth_session');
+          }
         }
       } catch (error) {
         console.error('Failed to initialize authentication:', error);
@@ -79,65 +89,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       
-      // Mock login - in production, this would make an API call
-      const mockUsers: Record<string, User> = {
-        admin: {
-          id: 1,
-          username: 'admin',
-          email: 'admin@buildsync.com',
-          role: 'admin',
-          permissions: getUserPermissions('admin'),
-          isActive: true
-        },
-        manager: {
-          id: 2,
-          username: 'manager',
-          email: 'manager@buildsync.com',
-          role: 'project_manager',
-          permissions: getUserPermissions('project_manager'),
-          isActive: true
-        },
-        supervisor: {
-          id: 3,
-          username: 'supervisor',
-          email: 'supervisor@buildsync.com',
-          role: 'supervisor',
-          permissions: getUserPermissions('supervisor'),
-          isActive: true
-        },
-        worker: {
-          id: 4,
-          username: 'worker',
-          email: 'worker@buildsync.com',
-          role: 'worker',
-          permissions: getUserPermissions('worker'),
-          isActive: true
-        },
-        inspector: {
-          id: 5,
-          username: 'inspector',
-          email: 'inspector@buildsync.com',
-          role: 'inspector',
-          permissions: getUserPermissions('inspector'),
-          isActive: true
-        },
-        client: {
-          id: 6,
-          username: 'client',
-          email: 'client@buildsync.com',
-          role: 'client',
-          permissions: getUserPermissions('client'),
-          isActive: true
-        }
-      };
+      const response = await apiRequest('POST', '/api/auth/login', {
+        username,
+        password
+      });
 
-      const userData = mockUsers[username.toLowerCase()];
-      if (!userData || password !== 'password') {
-        throw new Error('Invalid credentials');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Login failed');
       }
 
-      setUser(userData);
-      localStorage.setItem('auth_user', JSON.stringify(userData));
+      const data = await response.json();
+      
+      // Add permissions to user data
+      const userWithPermissions = {
+        ...data.user,
+        permissions: getUserPermissions(data.user.role as UserRole, data.user.permissions || [])
+      };
+      
+      // Store auth data
+      localStorage.setItem('auth_user', JSON.stringify(userWithPermissions));
+      localStorage.setItem('auth_session', data.sessionToken);
+      
+      setUser(userWithPermissions);
     } catch (error) {
       throw error;
     } finally {
@@ -145,9 +119,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('auth_user');
+  const logout = async () => {
+    try {
+      const sessionToken = localStorage.getItem('auth_session');
+      if (sessionToken) {
+        await apiRequest('POST', '/api/auth/logout', undefined, {
+          'session-token': sessionToken
+        });
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Always clear local state
+      localStorage.removeItem('auth_user');
+      localStorage.removeItem('auth_session');
+      setUser(null);
+    }
   };
 
   const checkPermission = (permission: Permission): boolean => {
