@@ -4,6 +4,8 @@ import { type Task } from "@shared/schema";
 import { getDaysInMonth, getFirstDayOfMonth } from "@/lib/calendar-utils";
 import { formatDate } from "@/lib/date-utils";
 import { getCategoryColor } from "@/lib/calendar-utils";
+import TaskDetailModal from "@/components/tasks/task-detail-modal";
+import { useState } from "react";
 
 interface CalendarViewProps {
   currentDate: Date;
@@ -16,9 +18,17 @@ export default function CalendarView({
   view, 
   searchTerm 
 }: CalendarViewProps) {
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
   });
+
+  const handleTaskClick = (task: Task) => {
+    setSelectedTask(task);
+    setIsDetailModalOpen(true);
+  };
 
   const filteredTasks = tasks.filter(task => 
     task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -101,6 +111,10 @@ export default function CalendarView({
                   className={`task-element task-animate-enter task-animate-hover ${getCategoryColor(task.category)} ${statusClasses} ${glowClass} text-xs px-2 py-1 rounded truncate cursor-pointer transform-gpu`}
                   data-testid={`task-chip-${task.id}`}
                   style={{ animationDelay: `${index * 0.1}s` }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleTaskClick(task);
+                  }}
                 >
                   {task.title}
                 </div>
@@ -185,6 +199,10 @@ export default function CalendarView({
                           }}
                           title={`${task.title} - ${formatTime(new Date(task.startDate))}`}
                           data-testid={`task-week-${task.id}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTaskClick(task);
+                          }}
                         >
                           <div className="font-medium">{task.title}</div>
                           <div className="text-[10px] opacity-75">
@@ -262,6 +280,10 @@ export default function CalendarView({
                         }}
                         title={`${task.title} - ${formatTime(new Date(task.startDate))}`}
                         data-testid={`task-day-${task.id}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTaskClick(task);
+                        }}
                       >
                         <div className="font-semibold">{task.title}</div>
                         <div className="text-xs opacity-90 mt-1">
@@ -383,6 +405,15 @@ export default function CalendarView({
           </>
         )}
       </CardContent>
+      
+      <TaskDetailModal 
+        task={selectedTask}
+        isOpen={isDetailModalOpen}
+        onClose={() => {
+          setIsDetailModalOpen(false);
+          setSelectedTask(null);
+        }}
+      />
     </Card>
   );
 }
