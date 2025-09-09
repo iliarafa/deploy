@@ -5,11 +5,13 @@ import { useState } from "react";
 import TaskModal from "@/components/tasks/task-modal";
 import MaterialRequestModal from "@/components/materials/material-request-modal";
 import InspectionModal from "@/components/inspections/inspection-modal";
+import VacancyModal from "@/components/vacancies/vacancy-modal";
 
 export default function QuickActions() {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
   const [isInspectionModalOpen, setIsInspectionModalOpen] = useState(false);
+  const [isVacancyModalOpen, setIsVacancyModalOpen] = useState(false);
 
   return (
     <>
@@ -45,10 +47,10 @@ export default function QuickActions() {
             
             <Button 
               className="w-full justify-start bg-green-800 hover:bg-green-900 text-white"
-              onClick={() => {/* TODO: Implement vacancy */}}
+              onClick={() => setIsVacancyModalOpen(true)}
             >
               <Home className="w-4 h-4 mr-3" />
-              Vacancy
+              Record Vacancy
             </Button>
             
             <Button 
@@ -75,6 +77,11 @@ export default function QuickActions() {
       <InspectionModal 
         isOpen={isInspectionModalOpen} 
         onClose={() => setIsInspectionModalOpen(false)} 
+      />
+      
+      <VacancyModal 
+        isOpen={isVacancyModalOpen} 
+        onClose={() => setIsVacancyModalOpen(false)} 
       />
     </>
   );
