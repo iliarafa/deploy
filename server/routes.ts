@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertTaskSchema, insertMaterialRequestSchema, insertCommunicationSchema } from "@shared/schema";
 import { z } from "zod";
+import { wsManager } from "./websocket";
+import { sendTaskNotification, sendMaterialRequestNotification } from "./email";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Task routes
@@ -56,6 +58,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validatedData = insertTaskSchema.parse(taskData);
       const task = await storage.createTask(validatedData);
+      
+      // Send real-time notification
+      wsManager.notifyTaskCreated(task);
+      
+      // Send email notification if assignedTo is provided
+      if (task.assignedTo) {
+        // For now, we'll use the assignedTo name to construct email
+        // In production, you'd want to store team member emails in a database
+        const teamEmails: { [key: string]: string } = {
+          'German': 'german@company.com',
+          'Marcelo': 'marcelo@company.com', 
+          'Luis C': 'luisc@company.com',
+          'Jose': 'jose@company.com',
+          'Miguel': 'miguel@company.com',
+          'Luis G': 'luisg@company.com'
+        };
+        
+        const assignedEmail = teamEmails[task.assignedTo];
+        if (assignedEmail) {
+          await sendTaskNotification(assignedEmail, task.title, 'System');
+        }
+      }
+      
       res.status(201).json(task);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -125,6 +150,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validatedData = insertMaterialRequestSchema.parse(requestData);
       const request = await storage.createMaterialRequest(validatedData);
+      
+      // Send real-time notification
+      wsManager.notifyMaterialRequestCreated(request);
+      
+      // Send email notification to all team members
+      const teamEmails = [
+        'german@company.com',
+        'marcelo@company.com', 
+        'luisc@company.com',
+        'jose@company.com',
+        'miguel@company.com',
+        'luisg@company.com'
+      ];
+      await sendMaterialRequestNotification(teamEmails, request.materialType, 'System');
+      
       res.status(201).json(request);
     } catch (error) {
       if (error instanceof z.ZodError) {

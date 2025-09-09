@@ -7,6 +7,7 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  email: text("email").notNull(),
 });
 
 export const tasks = pgTable("tasks", {
@@ -61,6 +62,7 @@ export const communicationsRelations = relations(communications, ({ one }) => ({
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
+  email: true,
 });
 
 export const insertTaskSchema = createInsertSchema(tasks).omit({
