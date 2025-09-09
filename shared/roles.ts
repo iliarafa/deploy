@@ -154,3 +154,6 @@ export const ROLE_HIERARCHY: Record<UserRole, number> = {
 export function isHigherRole(userRole: UserRole, compareRole: UserRole): boolean {
   return ROLE_HIERARCHY[userRole] > ROLE_HIERARCHY[compareRole];
 }
+
+// Export the array of user roles for form dropdowns
+export const USER_ROLES: UserRole[] = ["admin", "project_manager", "supervisor", "worker", "inspector", "client"];
