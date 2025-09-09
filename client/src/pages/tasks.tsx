@@ -1,6 +1,8 @@
 import Header from "@/components/layout/header";
 import MobileNav from "@/components/layout/mobile-nav";
 import TaskDetailModal from "@/components/tasks/task-detail-modal";
+import TaskModal from "@/components/tasks/task-modal";
+import TaskStatusUpdate from "@/components/tasks/task-status-update";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,10 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { type Task } from "@shared/schema";
-import { Search, Calendar, MapPin, User, Clock } from "lucide-react";
+import { Search, Calendar, MapPin, User, Clock, Plus } from "lucide-react";
 import { useState } from "react";
 import { formatDate } from "@/lib/date-utils";
 import { getCategoryColor } from "@/lib/calendar-utils";
+import { useAuth } from "@/contexts/auth-context";
 
 export default function Tasks() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -19,6 +22,8 @@ export default function Tasks() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const { hasPermission } = useAuth();
 
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
@@ -59,6 +64,16 @@ export default function Tasks() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mb-20 md:mb-0">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-4 md:mb-0">Task Management</h1>
+          {hasPermission('create_task') && (
+            <Button 
+              className="bg-primary text-white hover:bg-blue-700"
+              onClick={() => setIsCreateModalOpen(true)}
+              data-testid="button-create-task"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Create Task
+            </Button>
+          )}
         </div>
 
         {/* Filters */}
@@ -170,16 +185,19 @@ export default function Tasks() {
                         </Badge>
                       </div>
                       
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => {
-                          setSelectedTask(task);
-                          setIsDetailModalOpen(true);
-                        }}
-                      >
-                        View Details
-                      </Button>
+                      <div className="flex gap-2">
+                        <TaskStatusUpdate task={task} compact={true} />
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setSelectedTask(task);
+                            setIsDetailModalOpen(true);
+                          }}
+                        >
+                          View Details
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -196,6 +214,11 @@ export default function Tasks() {
           setIsDetailModalOpen(false);
           setSelectedTask(null);
         }}
+      />
+
+      <TaskModal 
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
       />
     </div>
   );

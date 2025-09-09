@@ -2,12 +2,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { type Task } from "@shared/schema";
-import { Calendar, MapPin, User, Clock, X, Trash2 } from "lucide-react";
+import { Calendar, MapPin, User, Clock, X, Trash2, Edit } from "lucide-react";
 import { formatDate } from "@/lib/date-utils";
 import { getCategoryColor } from "@/lib/calendar-utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import TaskStatusUpdate from "./task-status-update";
+import TaskEditModal from "./task-edit-modal";
+import { useState } from "react";
+import { useAuth } from "@/contexts/auth-context";
 
 interface TaskDetailModalProps {
   task: Task | null;
@@ -18,6 +22,8 @@ interface TaskDetailModalProps {
 export default function TaskDetailModal({ task, isOpen, onClose }: TaskDetailModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { hasPermission } = useAuth();
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const deleteTaskMutation = useMutation({
     mutationFn: async (taskId: number) => {
@@ -79,6 +85,11 @@ export default function TaskDetailModal({ task, isOpen, onClose }: TaskDetailMod
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Status Update Section */}
+          <div className="border-b pb-4">
+            <TaskStatusUpdate task={task} />
+          </div>
+
           {/* Status and Priority Badges */}
           <div className="flex flex-wrap gap-2">
             <Badge className={`task-element task-animate-enter ${getCategoryColor(task.category)}`} data-testid="badge-category">
@@ -160,22 +171,44 @@ export default function TaskDetailModal({ task, isOpen, onClose }: TaskDetailMod
           )}
 
           {/* Action Buttons */}
-          <div className="flex justify-end space-x-3 border-t pt-4">
+          <div className="flex justify-between border-t pt-4">
             <Button variant="outline" onClick={onClose}>
               Close
             </Button>
-            <Button 
-              variant="destructive"
-              onClick={handleDeleteTask}
-              disabled={deleteTaskMutation.isPending}
-              data-testid="button-delete-task"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              {deleteTaskMutation.isPending ? "Deleting..." : "Delete Task"}
-            </Button>
+            
+            <div className="flex space-x-3">
+              {hasPermission('edit_task') && (
+                <Button 
+                  variant="outline"
+                  onClick={() => setIsEditModalOpen(true)}
+                  data-testid="button-edit-task"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Task
+                </Button>
+              )}
+              
+              {hasPermission('delete_task') && (
+                <Button 
+                  variant="destructive"
+                  onClick={handleDeleteTask}
+                  disabled={deleteTaskMutation.isPending}
+                  data-testid="button-delete-task"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  {deleteTaskMutation.isPending ? "Deleting..." : "Delete Task"}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </DialogContent>
+
+      <TaskEditModal 
+        task={task}
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+      />
     </Dialog>
   );
 }

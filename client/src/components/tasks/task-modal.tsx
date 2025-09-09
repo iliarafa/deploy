@@ -10,7 +10,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertTaskSchema } from "@shared/schema";
 import { z } from "zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -30,6 +30,12 @@ type TaskFormData = z.infer<typeof taskFormSchema>;
 export default function TaskModal({ isOpen, onClose }: TaskModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Fetch users for assignment dropdown
+  const { data: users = [] } = useQuery<any[]>({
+    queryKey: ["/api/users"],
+    enabled: isOpen,
+  });
 
   const form = useForm<TaskFormData>({
     resolver: zodResolver(taskFormSchema),
@@ -211,12 +217,13 @@ export default function TaskModal({ isOpen, onClose }: TaskModalProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="43">43</SelectItem>
-                      <SelectItem value="44">44</SelectItem>
-                      <SelectItem value="45">45</SelectItem>
-                      <SelectItem value="51">51</SelectItem>
-                      <SelectItem value="59">59</SelectItem>
-                      <SelectItem value="60">60</SelectItem>
+                      <SelectItem value="">No specific location</SelectItem>
+                      <SelectItem value="43">Location 43</SelectItem>
+                      <SelectItem value="44">Location 44</SelectItem>
+                      <SelectItem value="45">Location 45</SelectItem>
+                      <SelectItem value="51">Location 51</SelectItem>
+                      <SelectItem value="59">Location 59</SelectItem>
+                      <SelectItem value="60">Location 60</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -237,12 +244,15 @@ export default function TaskModal({ isOpen, onClose }: TaskModalProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="German">German</SelectItem>
-                      <SelectItem value="Marcelo">Marcelo</SelectItem>
-                      <SelectItem value="Luis C">Luis C</SelectItem>
-                      <SelectItem value="Jose">Jose</SelectItem>
-                      <SelectItem value="Miguel">Miguel</SelectItem>
-                      <SelectItem value="Luis G">Luis G</SelectItem>
+                      <SelectItem value="">Unassigned</SelectItem>
+                      {users.map((user: any) => (
+                        <SelectItem key={user.id} value={user.username}>
+                          {user.firstName && user.lastName 
+                            ? `${user.firstName} ${user.lastName} (${user.username})`
+                            : user.username
+                          }
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

@@ -281,6 +281,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Users endpoint for task assignment (accessible by users with task permissions)
+  app.get("/api/users", authenticate, async (req, res) => {
+    try {
+      const users = await storage.getUsers();
+      // Remove passwords and return only essential user info for task assignment
+      const assignableUsers = users.map(({ password, ...user }) => ({
+        id: user.id,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive
+      }));
+      res.json(assignableUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
   // Task routes with authorization
   app.get("/api/tasks", authenticate, canAccessResource('task'), addUserContext, async (req, res) => {
     try {
