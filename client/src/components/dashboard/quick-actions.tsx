@@ -4,10 +4,12 @@ import { Plus, Package, ClipboardCheck, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import TaskModal from "@/components/tasks/task-modal";
 import MaterialRequestModal from "@/components/materials/material-request-modal";
+import InspectionModal from "@/components/inspections/inspection-modal";
 
 export default function QuickActions() {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
+  const [isInspectionModalOpen, setIsInspectionModalOpen] = useState(false);
 
   return (
     <>
@@ -35,7 +37,7 @@ export default function QuickActions() {
             
             <Button 
               className="w-full justify-start bg-green-500 hover:bg-green-600 text-white"
-              onClick={() => {/* TODO: Implement schedule inspection */}}
+              onClick={() => setIsInspectionModalOpen(true)}
             >
               <ClipboardCheck className="w-4 h-4 mr-3" />
               Schedule Inspection
@@ -60,6 +62,11 @@ export default function QuickActions() {
       <MaterialRequestModal 
         isOpen={isMaterialModalOpen} 
         onClose={() => setIsMaterialModalOpen(false)} 
+      />
+      
+      <InspectionModal 
+        isOpen={isInspectionModalOpen} 
+        onClose={() => setIsInspectionModalOpen(false)} 
       />
     </>
   );
