@@ -204,7 +204,7 @@ export default function TaskModal({ isOpen, onClose }: TaskModalProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Location</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
                     <FormControl>
                       <SelectTrigger data-testid="select-location">
                         <SelectValue placeholder="Select location" />
@@ -230,7 +230,7 @@ export default function TaskModal({ isOpen, onClose }: TaskModalProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Assigned To</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
                     <FormControl>
                       <SelectTrigger data-testid="select-assigned-to">
                         <SelectValue placeholder="Select team member" />
@@ -257,7 +257,7 @@ export default function TaskModal({ isOpen, onClose }: TaskModalProps) {
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Task details..." rows={3} {...field} />
+                    <Textarea placeholder="Task details..." rows={3} {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
