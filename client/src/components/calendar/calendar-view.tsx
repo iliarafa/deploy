@@ -32,6 +32,28 @@ export default function CalendarView({
     });
   };
 
+  // Helper functions for week view
+  const getStartOfWeek = (date: Date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day;
+    return new Date(d.setDate(diff));
+  };
+
+  const getWeekDates = (startOfWeek: Date) => {
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(startOfWeek);
+      date.setDate(startOfWeek.getDate() + i);
+      dates.push(date);
+    }
+    return dates;
+  };
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
   const renderMonthView = () => {
     const daysInMonth = getDaysInMonth(currentDate);
     const firstDay = getFirstDayOfMonth(currentDate);
@@ -98,6 +120,71 @@ export default function CalendarView({
     return days;
   };
 
+  const renderWeekView = () => {
+    const startOfWeek = getStartOfWeek(currentDate);
+    const weekDates = getWeekDates(startOfWeek);
+    const timeSlots = [];
+    
+    // Generate time slots from 6 AM to 10 PM
+    for (let hour = 6; hour <= 22; hour++) {
+      const timeLabel = new Date(2024, 0, 1, hour, 0).toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+      });
+      
+      timeSlots.push(
+        <div key={hour} className="border-b border-gray-100">
+          <div className="flex">
+            {/* Time label */}
+            <div className="w-16 md:w-20 text-xs text-gray-500 p-2 text-right border-r border-gray-100">
+              {timeLabel}
+            </div>
+            
+            {/* Days */}
+            {weekDates.map((date, dayIndex) => {
+              const tasksForDay = getTasksForDate(date);
+              const isToday = date.toDateString() === new Date().toDateString();
+              
+              return (
+                <div 
+                  key={dayIndex} 
+                  className={`flex-1 min-h-[60px] border-r border-gray-100 p-1 relative hover:bg-gray-50 ${
+                    isToday ? 'bg-blue-50' : ''
+                  }`}
+                >
+                  {tasksForDay
+                    .filter(task => {
+                      const taskHour = new Date(task.startDate).getHours();
+                      return taskHour === hour;
+                    })
+                    .map((task, taskIndex) => (
+                      <div
+                        key={task.id}
+                        className={`absolute left-1 right-1 z-10 text-xs px-2 py-1 rounded truncate ${getCategoryColor(task.category)} shadow-sm`}
+                        style={{
+                          top: `${(new Date(task.startDate).getMinutes() / 60) * 60}px`,
+                        }}
+                        title={`${task.title} - ${formatTime(new Date(task.startDate))}`}
+                      >
+                        <div className="font-medium">{task.title}</div>
+                        <div className="text-[10px] opacity-75">
+                          {formatTime(new Date(task.startDate))}
+                        </div>
+                      </div>
+                    ))
+                  }
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+    
+    return timeSlots;
+  };
+
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   if (isLoading) {
@@ -134,9 +221,40 @@ export default function CalendarView({
         )}
 
         {view === "week" && (
-          <div className="text-center py-8">
-            <div className="text-gray-500">Week view coming soon...</div>
-          </div>
+          <>
+            {/* Week Header with Dates */}
+            <div className="flex border-b border-gray-200 mb-2">
+              <div className="w-16 md:w-20 text-xs text-gray-500 p-2 text-right border-r border-gray-100">
+                Time
+              </div>
+              {getWeekDates(getStartOfWeek(currentDate)).map((date, index) => {
+                const isToday = date.toDateString() === new Date().toDateString();
+                const dayName = weekDays[date.getDay()];
+                
+                return (
+                  <div 
+                    key={index} 
+                    className={`flex-1 text-center p-3 border-r border-gray-100 ${
+                      isToday ? 'bg-blue-50 text-primary font-semibold' : 'text-gray-700'
+                    }`}
+                  >
+                    <div className="text-sm font-medium">{dayName}</div>
+                    <div className={`text-lg ${isToday ? 'text-primary' : 'text-gray-900'}`}>
+                      {date.getDate()}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {date.toLocaleDateString([], { month: 'short' })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Week Grid */}
+            <div className="max-h-[600px] overflow-y-auto">
+              {renderWeekView()}
+            </div>
+          </>
         )}
 
         {view === "day" && (
