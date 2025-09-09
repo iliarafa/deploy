@@ -185,6 +185,80 @@ export default function CalendarView({
     return timeSlots;
   };
 
+  const renderDayView = () => {
+    const tasksForDay = getTasksForDate(currentDate);
+    const timeSlots = [];
+    
+    // Generate time slots from 6 AM to 10 PM with 30-minute intervals
+    for (let hour = 6; hour <= 22; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        const timeSlot = new Date(2024, 0, 1, hour, minute);
+        const timeLabel = timeSlot.toLocaleTimeString([], { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: true 
+        });
+        
+        const slotKey = `${hour}-${minute}`;
+        const isHourStart = minute === 0;
+        
+        timeSlots.push(
+          <div key={slotKey} className={`border-b ${isHourStart ? 'border-gray-200' : 'border-gray-100'}`}>
+            <div className="flex">
+              {/* Time label */}
+              <div className="w-20 md:w-24 text-xs text-gray-500 p-3 text-right border-r border-gray-100">
+                {isHourStart && timeLabel}
+              </div>
+              
+              {/* Single day column */}
+              <div className="flex-1 min-h-[40px] p-2 relative hover:bg-gray-50">
+                {tasksForDay
+                  .filter(task => {
+                    const taskDate = new Date(task.startDate);
+                    const taskHour = taskDate.getHours();
+                    const taskMinute = taskDate.getMinutes();
+                    
+                    // Check if task falls within this 30-minute slot
+                    return taskHour === hour && taskMinute >= minute && taskMinute < minute + 30;
+                  })
+                  .map((task) => {
+                    const taskDate = new Date(task.startDate);
+                    const taskMinute = taskDate.getMinutes();
+                    const offsetFromSlotStart = taskMinute - minute;
+                    
+                    return (
+                      <div
+                        key={task.id}
+                        className={`absolute left-2 right-2 z-10 text-sm px-3 py-2 rounded-lg ${getCategoryColor(task.category)} shadow-sm border border-white/20`}
+                        style={{
+                          top: `${(offsetFromSlotStart / 30) * 40}px`,
+                        }}
+                        title={`${task.title} - ${formatTime(new Date(task.startDate))}`}
+                      >
+                        <div className="font-semibold">{task.title}</div>
+                        <div className="text-xs opacity-90 mt-1">
+                          {formatTime(new Date(task.startDate))}
+                          {task.assignedTo && ` • ${task.assignedTo}`}
+                        </div>
+                        {task.location && (
+                          <div className="text-xs opacity-75 mt-1">
+                            📍 {task.location}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                }
+              </div>
+            </div>
+          </div>
+        );
+      }
+    }
+    
+    return timeSlots;
+  };
+
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   if (isLoading) {
@@ -258,9 +332,27 @@ export default function CalendarView({
         )}
 
         {view === "day" && (
-          <div className="text-center py-8">
-            <div className="text-gray-500">Day view coming soon...</div>
-          </div>
+          <>
+            {/* Day Header */}
+            <div className="text-center border-b border-gray-200 pb-4 mb-4">
+              <div className="text-2xl font-bold text-gray-900 mb-1">
+                {currentDate.toLocaleDateString([], { 
+                  weekday: 'long', 
+                  month: 'long', 
+                  day: 'numeric',
+                  year: 'numeric' 
+                })}
+              </div>
+              <div className="text-sm text-gray-500">
+                {getTasksForDate(currentDate).length} task{getTasksForDate(currentDate).length !== 1 ? 's' : ''} scheduled
+              </div>
+            </div>
+
+            {/* Day Grid */}
+            <div className="max-h-[700px] overflow-y-auto">
+              {renderDayView()}
+            </div>
+          </>
         )}
       </CardContent>
     </Card>
