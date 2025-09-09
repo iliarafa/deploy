@@ -6,6 +6,7 @@ import TaskList from "@/components/tasks/task-list";
 import QuickActions from "@/components/dashboard/quick-actions";
 import TaskCategories from "@/components/dashboard/task-categories";
 import RecentActivity from "@/components/dashboard/recent-activity";
+import NotificationSetup from "@/components/notifications/notification-setup";
 import { useState } from "react";
 
 export default function Calendar() {
@@ -40,6 +41,7 @@ export default function Calendar() {
           </div>
           
           <div className="space-y-6">
+            <NotificationSetup />
             <QuickActions />
             <TaskCategories />
             <RecentActivity />
