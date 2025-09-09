@@ -7,10 +7,43 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  email: text("email").notNull(),
+  email: text("email").notNull().unique(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
   role: text("role").notNull().default("worker"),
   permissions: text("permissions").array().default([]),
+  location: text("location"), // Which construction site/location they work at
+  profileImage: text("profile_image"),
   isActive: boolean("is_active").notNull().default(true),
+  isApproved: boolean("is_approved").notNull().default(false),
+  approvedBy: integer("approved_by"), // Admin user who approved
+  approvedAt: timestamp("approved_at"),
+  lastLogin: timestamp("last_login"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userRegistrationRequests = pgTable("user_registration_requests", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull(),
+  email: text("email").notNull(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  password: text("password").notNull(),
+  requestedRole: text("requested_role").notNull().default("worker"),
+  location: text("location"),
+  reasonForAccess: text("reason_for_access"),
+  status: text("status").notNull().default("pending"), // pending, approved, rejected
+  reviewedBy: integer("reviewed_by"), // Admin who reviewed
+  reviewedAt: timestamp("reviewed_at"),
+  reviewNotes: text("review_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userSessions = pgTable("user_sessions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  sessionToken: text("session_token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -63,6 +96,28 @@ export const vacancies = pgTable("vacancies", {
 });
 
 // Relations
+export const usersRelations = relations(users, ({ many, one }) => ({
+  approvedByUser: one(users, {
+    fields: [users.approvedBy],
+    references: [users.id],
+  }),
+  sessions: many(userSessions),
+}));
+
+export const userRegistrationRequestsRelations = relations(userRegistrationRequests, ({ one }) => ({
+  reviewedByUser: one(users, {
+    fields: [userRegistrationRequests.reviewedBy],
+    references: [users.id],
+  }),
+}));
+
+export const userSessionsRelations = relations(userSessions, ({ one }) => ({
+  user: one(users, {
+    fields: [userSessions.userId],
+    references: [users.id],
+  }),
+}));
+
 export const tasksRelations = relations(tasks, ({ many }) => ({
   communications: many(communications),
 }));
@@ -78,6 +133,40 @@ export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
   email: true,
+  firstName: true,
+  lastName: true,
+  role: true,
+  location: true,
+});
+
+export const insertUserRegistrationRequestSchema = createInsertSchema(userRegistrationRequests).omit({
+  id: true,
+  createdAt: true,
+  reviewedBy: true,
+  reviewedAt: true,
+  reviewNotes: true,
+  status: true,
+});
+
+export const insertUserSessionSchema = createInsertSchema(userSessions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const updateUserSchema = createInsertSchema(users).pick({
+  firstName: true,
+  lastName: true,
+  email: true,
+  role: true,
+  location: true,
+  isActive: true,
+  isApproved: true,
+}).partial();
+
+export const reviewRegistrationRequestSchema = z.object({
+  status: z.enum(["approved", "rejected"]),
+  reviewNotes: z.string().optional(),
+  assignedRole: z.string().optional(),
 });
 
 export const insertTaskSchema = createInsertSchema(tasks).omit({
@@ -102,6 +191,12 @@ export const insertVacancySchema = createInsertSchema(vacancies).omit({
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type UpdateUser = z.infer<typeof updateUserSchema>;
+export type UserRegistrationRequest = typeof userRegistrationRequests.$inferSelect;
+export type InsertUserRegistrationRequest = z.infer<typeof insertUserRegistrationRequestSchema>;
+export type ReviewRegistrationRequest = z.infer<typeof reviewRegistrationRequestSchema>;
+export type UserSession = typeof userSessions.$inferSelect;
+export type InsertUserSession = z.infer<typeof insertUserSessionSchema>;
 export type Task = typeof tasks.$inferSelect;
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 export type MaterialRequest = typeof materialRequests.$inferSelect;
