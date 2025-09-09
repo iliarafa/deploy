@@ -1,7 +1,14 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertTaskSchema, insertMaterialRequestSchema, insertCommunicationSchema } from "@shared/schema";
+import { 
+  insertTaskSchema, 
+  insertMaterialRequestSchema, 
+  insertCommunicationSchema,
+  insertUserRegistrationRequestSchema,
+  reviewRegistrationRequestSchema,
+  updateUserSchema 
+} from "@shared/schema";
 import { z } from "zod";
 import { wsManager } from "./websocket";
 import { sendTaskNotification, sendMaterialRequestNotification } from "./email";
@@ -15,6 +22,181 @@ import {
 import { type UserRole } from "@shared/roles";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // User registration routes
+  app.post("/api/register", async (req, res) => {
+    try {
+      const validatedData = insertUserRegistrationRequestSchema.parse(req.body);
+      
+      // Check if username or email already exists
+      const existingUser = await storage.getUserByUsername(validatedData.username);
+      const existingEmail = await storage.getUserByEmail(validatedData.email);
+      
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+      
+      if (existingEmail) {
+        return res.status(400).json({ message: "Email already registered" });
+      }
+      
+      const registrationRequest = await storage.createRegistrationRequest(validatedData);
+      
+      // Send notification to admins about new registration
+      try {
+        wsManager.broadcast({ 
+          type: "registration_request", 
+          request: registrationRequest 
+        });
+      } catch (notifError) {
+        console.log("Registration notification failed:", notifError);
+      }
+      
+      res.status(201).json({ 
+        message: "Registration request submitted successfully. Please wait for admin approval.",
+        requestId: registrationRequest.id
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid data", errors: error.errors });
+      } else {
+        console.error("Registration error:", error);
+        res.status(500).json({ message: "Failed to submit registration request" });
+      }
+    }
+  });
+
+  // Admin routes for user management
+  app.get("/api/admin/registration-requests", authenticate, requireRole('admin'), async (req, res) => {
+    try {
+      const requests = await storage.getRegistrationRequests();
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching registration requests:", error);
+      res.status(500).json({ message: "Failed to fetch registration requests" });
+    }
+  });
+
+  app.put("/api/admin/registration-requests/:id/review", authenticate, requireRole('admin'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user?.id;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      const validatedData = reviewRegistrationRequestSchema.parse(req.body);
+      const reviewedRequest = await storage.reviewRegistrationRequest(id, userId, validatedData);
+      
+      // Send real-time notification
+      try {
+        wsManager.broadcast({ 
+          type: "registration_reviewed", 
+          request: reviewedRequest 
+        });
+      } catch (notifError) {
+        console.log("Review notification failed:", notifError);
+      }
+      
+      res.json(reviewedRequest);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid data", errors: error.errors });
+      } else {
+        console.error("Review error:", error);
+        res.status(500).json({ message: "Failed to review registration request" });
+      }
+    }
+  });
+
+  app.get("/api/admin/users", authenticate, requireRole('admin'), async (req, res) => {
+    try {
+      const users = await storage.getUsers();
+      // Remove passwords from response
+      const safeUsers = users.map(({ password, ...user }) => user);
+      res.json(safeUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.put("/api/admin/users/:id", authenticate, requireRole('admin'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = updateUserSchema.parse(req.body);
+      
+      const updatedUser = await storage.updateUser(id, validatedData);
+      const { password, ...safeUser } = updatedUser;
+      
+      res.json(safeUser);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid data", errors: error.errors });
+      } else {
+        console.error("Update user error:", error);
+        res.status(500).json({ message: "Failed to update user" });
+      }
+    }
+  });
+
+  app.delete("/api/admin/users/:id", authenticate, requireRole('admin'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deactivateUser(id);
+      res.json({ message: "User deactivated successfully" });
+    } catch (error) {
+      console.error("Deactivate user error:", error);
+      res.status(500).json({ message: "Failed to deactivate user" });
+    }
+  });
+
+  app.get("/api/users/profile", authenticate, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const { password, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (error) {
+      console.error("Profile error:", error);
+      res.status(500).json({ message: "Failed to fetch user profile" });
+    }
+  });
+
+  app.put("/api/users/profile", authenticate, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      // Users can only update their own basic profile info (not role/permissions)
+      const allowedUpdates = {
+        firstName: req.body.firstName,
+        lastName: req.body.lastName,
+        email: req.body.email,
+        location: req.body.location
+      };
+      
+      const updatedUser = await storage.updateUser(userId, allowedUpdates);
+      const { password, ...safeUser } = updatedUser;
+      
+      res.json(safeUser);
+    } catch (error) {
+      console.error("Update profile error:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
   // Task routes with authorization
   app.get("/api/tasks", authenticate, canAccessResource('task'), addUserContext, async (req, res) => {
     try {
@@ -287,7 +469,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Send real-time notification
       try {
-        wsManager.broadcast("vacancy", { type: "created", vacancy });
+        wsManager.broadcast({ type: "vacancy_created", vacancy });
       } catch (notifError) {
         console.log("Notification failed:", notifError);
       }

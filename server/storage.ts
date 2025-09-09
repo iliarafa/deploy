@@ -1,11 +1,19 @@
 import { 
   users, 
+  userRegistrationRequests,
+  userSessions,
   tasks, 
   materialRequests, 
   communications,
   vacancies,
   type User, 
   type InsertUser,
+  type UpdateUser,
+  type UserRegistrationRequest,
+  type InsertUserRegistrationRequest,
+  type ReviewRegistrationRequest,
+  type UserSession,
+  type InsertUserSession,
   type Task,
   type InsertTask,
   type MaterialRequest,
@@ -17,15 +25,48 @@ import {
 } from "@shared/schema";
 import { type UserRole, type Permission, hasPermission, getUserPermissions } from "@shared/roles";
 import { db } from "./db";
-import { eq, and, gte, lte } from "drizzle-orm";
+import { eq, and, gte, lte, lt } from "drizzle-orm";
+import { randomBytes, createHash, pbkdf2Sync } from "crypto";
+
+// Utility functions for password hashing and session management
+function hashPassword(password: string): string {
+  const salt = randomBytes(32).toString('hex');
+  const hash = pbkdf2Sync(password, salt, 10000, 64, 'sha256').toString('hex');
+  return `${salt}:${hash}`;
+}
+
+function verifyPassword(password: string, hashedPassword: string): boolean {
+  const [salt, hash] = hashedPassword.split(':');
+  const verifyHash = pbkdf2Sync(password, salt, 10000, 64, 'sha256').toString('hex');
+  return hash === verifyHash;
+}
+
+function generateSessionToken(): string {
+  return randomBytes(32).toString('hex');
+}
 
 export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  updateUser(id: number, updates: Partial<InsertUser>): Promise<User>;
+  updateUser(id: number, updates: UpdateUser): Promise<User>;
   getUsers(): Promise<User[]>;
+  deactivateUser(id: number): Promise<User>;
+  approveUser(id: number, approvedBy: number, role: string): Promise<User>;
+  
+  // User registration and approval
+  createRegistrationRequest(request: InsertUserRegistrationRequest): Promise<UserRegistrationRequest>;
+  getRegistrationRequests(): Promise<UserRegistrationRequest[]>;
+  getRegistrationRequest(id: number): Promise<UserRegistrationRequest | undefined>;
+  reviewRegistrationRequest(id: number, reviewedBy: number, review: ReviewRegistrationRequest): Promise<UserRegistrationRequest>;
+  
+  // Session management
+  createSession(userId: number, expiresAt: Date): Promise<UserSession>;
+  getSessionByToken(token: string): Promise<UserSession | undefined>;
+  deleteSession(token: string): Promise<void>;
+  cleanExpiredSessions(): Promise<void>;
   
   // Task operations with role-based filtering
   getTasks(userId?: number, userRole?: UserRole): Promise<Task[]>;
@@ -60,11 +101,14 @@ export interface IStorage {
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
+  private registrationRequests: Map<number, UserRegistrationRequest>;
+  private sessions: Map<string, UserSession>;
   private tasks: Map<number, Task>;
   private materialRequests: Map<number, MaterialRequest>;
   private communications: Map<number, Communication>;
   private vacancies: Map<number, Vacancy>;
   private currentUserId: number;
+  private currentRequestId: number;
   private currentTaskId: number;
   private currentMaterialRequestId: number;
   private currentCommunicationId: number;
@@ -72,11 +116,14 @@ export class MemStorage implements IStorage {
 
   constructor() {
     this.users = new Map();
+    this.registrationRequests = new Map();
+    this.sessions = new Map();
     this.tasks = new Map();
     this.materialRequests = new Map();
     this.communications = new Map();
     this.vacancies = new Map();
     this.currentUserId = 1;
+    this.currentRequestId = 1;
     this.currentTaskId = 1;
     this.currentMaterialRequestId = 1;
     this.currentCommunicationId = 1;
@@ -93,21 +140,35 @@ export class MemStorage implements IStorage {
     );
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.email === email,
+    );
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.currentUserId++;
     const user: User = { 
-      ...insertUser, 
+      ...insertUser,
       id,
+      firstName: insertUser.firstName || null,
+      lastName: insertUser.lastName || null,
       role: insertUser.role || "worker",
-      permissions: insertUser.permissions || [],
-      isActive: insertUser.isActive !== false,
+      permissions: [],
+      location: insertUser.location || null,
+      profileImage: null,
+      isActive: true,
+      isApproved: false,
+      approvedBy: null,
+      approvedAt: null,
+      lastLogin: null,
       createdAt: new Date()
     };
     this.users.set(id, user);
     return user;
   }
 
-  async updateUser(id: number, updates: Partial<InsertUser>): Promise<User> {
+  async updateUser(id: number, updates: UpdateUser): Promise<User> {
     const existingUser = this.users.get(id);
     if (!existingUser) {
       throw new Error(`User with id ${id} not found`);
@@ -115,6 +176,123 @@ export class MemStorage implements IStorage {
     const updatedUser = { ...existingUser, ...updates };
     this.users.set(id, updatedUser);
     return updatedUser;
+  }
+
+  async deactivateUser(id: number): Promise<User> {
+    const existingUser = this.users.get(id);
+    if (!existingUser) {
+      throw new Error(`User with id ${id} not found`);
+    }
+    const updatedUser = { ...existingUser, isActive: false };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+
+  async approveUser(id: number, approvedBy: number, role: string): Promise<User> {
+    const existingUser = this.users.get(id);
+    if (!existingUser) {
+      throw new Error(`User with id ${id} not found`);
+    }
+    const updatedUser = { 
+      ...existingUser, 
+      isApproved: true,
+      approvedBy: approvedBy,
+      approvedAt: new Date(),
+      role: role
+    };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+
+  // Registration and approval (simplified for memory storage)
+  async createRegistrationRequest(request: InsertUserRegistrationRequest): Promise<UserRegistrationRequest> {
+    const id = this.currentRequestId++;
+    const registrationRequest: UserRegistrationRequest = { 
+      ...request, 
+      id,
+      status: "pending",
+      reviewedBy: null,
+      reviewedAt: null,
+      reviewNotes: null,
+      createdAt: new Date()
+    };
+    this.registrationRequests.set(id, registrationRequest);
+    return registrationRequest;
+  }
+
+  async getRegistrationRequests(): Promise<UserRegistrationRequest[]> {
+    return Array.from(this.registrationRequests.values());
+  }
+
+  async getRegistrationRequest(id: number): Promise<UserRegistrationRequest | undefined> {
+    return this.registrationRequests.get(id);
+  }
+
+  async reviewRegistrationRequest(id: number, reviewedBy: number, review: ReviewRegistrationRequest): Promise<UserRegistrationRequest> {
+    const existingRequest = this.registrationRequests.get(id);
+    if (!existingRequest) {
+      throw new Error(`Registration request with id ${id} not found`);
+    }
+    
+    const updatedRequest = { 
+      ...existingRequest, 
+      status: review.status,
+      reviewedBy: reviewedBy,
+      reviewedAt: new Date(),
+      reviewNotes: review.reviewNotes || null
+    };
+    this.registrationRequests.set(id, updatedRequest);
+
+    // If approved, create user account
+    if (review.status === 'approved') {
+      const userData: InsertUser = {
+        username: existingRequest.username,
+        password: existingRequest.password,
+        email: existingRequest.email,
+        firstName: existingRequest.firstName,
+        lastName: existingRequest.lastName,
+        role: review.assignedRole || existingRequest.requestedRole,
+        location: existingRequest.location || null
+      };
+      await this.createUser(userData);
+    }
+
+    return updatedRequest;
+  }
+
+  // Session management (simplified for memory storage)
+  async createSession(userId: number, expiresAt: Date): Promise<UserSession> {
+    const sessionToken = generateSessionToken();
+    const session: UserSession = {
+      id: Date.now(), // Simple ID for memory storage
+      userId,
+      sessionToken,
+      expiresAt,
+      createdAt: new Date()
+    };
+    this.sessions.set(sessionToken, session);
+    return session;
+  }
+
+  async getSessionByToken(token: string): Promise<UserSession | undefined> {
+    const session = this.sessions.get(token);
+    if (session && session.expiresAt > new Date()) {
+      return session;
+    }
+    return undefined;
+  }
+
+  async deleteSession(token: string): Promise<void> {
+    this.sessions.delete(token);
+  }
+
+  async cleanExpiredSessions(): Promise<void> {
+    const now = new Date();
+    for (const [token, session] of this.sessions.entries()) {
+      if (session.expiresAt <= now) {
+        this.sessions.delete(token);
+      }
+    }
   }
 
   async getUsers(): Promise<User[]> {
@@ -286,7 +464,12 @@ export class MemStorage implements IStorage {
 
   async createVacancy(insertVacancy: InsertVacancy): Promise<Vacancy> {
     const id = this.currentVacancyId++;
-    const vacancy: Vacancy = { ...insertVacancy, id, createdAt: new Date() };
+    const vacancy: Vacancy = { 
+      ...insertVacancy, 
+      id, 
+      status: insertVacancy.status || "vacant",
+      createdAt: new Date()
+    };
     this.vacancies.set(id, vacancy);
     return vacancy;
   }
@@ -318,15 +501,22 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
+    // Hash password before storing
+    const hashedPassword = hashPassword(insertUser.password);
     const [user] = await db
       .insert(users)
-      .values(insertUser)
+      .values({ ...insertUser, password: hashedPassword })
       .returning();
     return user;
   }
 
-  async updateUser(id: number, updates: Partial<InsertUser>): Promise<User> {
+  async updateUser(id: number, updates: UpdateUser): Promise<User> {
     const [user] = await db
       .update(users)
       .set(updates)
@@ -340,6 +530,126 @@ export class DatabaseStorage implements IStorage {
 
   async getUsers(): Promise<User[]> {
     return await db.select().from(users).where(eq(users.isActive, true));
+  }
+
+  async deactivateUser(id: number): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ isActive: false })
+      .where(eq(users.id, id))
+      .returning();
+    if (!user) {
+      throw new Error(`User with id ${id} not found`);
+    }
+    return user;
+  }
+
+  async approveUser(id: number, approvedBy: number, role: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ 
+        isApproved: true,
+        approvedBy: approvedBy,
+        approvedAt: new Date(),
+        role: role 
+      })
+      .where(eq(users.id, id))
+      .returning();
+    if (!user) {
+      throw new Error(`User with id ${id} not found`);
+    }
+    return user;
+  }
+
+  // User registration and approval
+  async createRegistrationRequest(request: InsertUserRegistrationRequest): Promise<UserRegistrationRequest> {
+    // Hash password before storing
+    const hashedPassword = hashPassword(request.password);
+    const [registrationRequest] = await db
+      .insert(userRegistrationRequests)
+      .values({ ...request, password: hashedPassword })
+      .returning();
+    return registrationRequest;
+  }
+
+  async getRegistrationRequests(): Promise<UserRegistrationRequest[]> {
+    return await db.select().from(userRegistrationRequests);
+  }
+
+  async getRegistrationRequest(id: number): Promise<UserRegistrationRequest | undefined> {
+    const [request] = await db.select().from(userRegistrationRequests).where(eq(userRegistrationRequests.id, id));
+    return request || undefined;
+  }
+
+  async reviewRegistrationRequest(id: number, reviewedBy: number, review: ReviewRegistrationRequest): Promise<UserRegistrationRequest> {
+    // First update the registration request
+    const [reviewedRequest] = await db
+      .update(userRegistrationRequests)
+      .set({
+        status: review.status,
+        reviewedBy: reviewedBy,
+        reviewedAt: new Date(),
+        reviewNotes: review.reviewNotes || null
+      })
+      .where(eq(userRegistrationRequests.id, id))
+      .returning();
+
+    if (!reviewedRequest) {
+      throw new Error(`Registration request with id ${id} not found`);
+    }
+
+    // If approved, create the actual user account
+    if (review.status === 'approved') {
+      const userData = {
+        username: reviewedRequest.username,
+        password: reviewedRequest.password, // Already hashed
+        email: reviewedRequest.email,
+        firstName: reviewedRequest.firstName,
+        lastName: reviewedRequest.lastName,
+        role: review.assignedRole || reviewedRequest.requestedRole,
+        location: reviewedRequest.location,
+        isApproved: true,
+        approvedBy: reviewedBy,
+        approvedAt: new Date()
+      };
+
+      await db.insert(users).values(userData);
+    }
+
+    return reviewedRequest;
+  }
+
+  // Session management
+  async createSession(userId: number, expiresAt: Date): Promise<UserSession> {
+    const sessionToken = generateSessionToken();
+    const [session] = await db
+      .insert(userSessions)
+      .values({
+        userId,
+        sessionToken,
+        expiresAt
+      })
+      .returning();
+    return session;
+  }
+
+  async getSessionByToken(token: string): Promise<UserSession | undefined> {
+    const [session] = await db
+      .select()
+      .from(userSessions)
+      .where(and(
+        eq(userSessions.sessionToken, token),
+        gte(userSessions.expiresAt, new Date())
+      ));
+    return session || undefined;
+  }
+
+  async deleteSession(token: string): Promise<void> {
+    await db.delete(userSessions).where(eq(userSessions.sessionToken, token));
+  }
+
+  async cleanExpiredSessions(): Promise<void> {
+    await db.delete(userSessions).where(lt(userSessions.expiresAt, new Date()));
   }
 
   async checkUserPermission(userId: number, permission: Permission): Promise<boolean> {
