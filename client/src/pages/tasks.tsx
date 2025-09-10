@@ -23,10 +23,11 @@ export default function Tasks() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const { hasPermission } = useAuth();
+  const { hasPermission, isLoading: authLoading } = useAuth();
 
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
+    enabled: !authLoading, // Wait for authentication verification before fetching
   });
 
   const filteredTasks = tasks.filter(task => {

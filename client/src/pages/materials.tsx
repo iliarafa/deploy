@@ -11,15 +11,18 @@ import { Search, Calendar, MapPin, Package, Hash, Plus } from "lucide-react";
 import { useState } from "react";
 import { formatDate } from "@/lib/date-utils";
 import MaterialRequestModal from "@/components/materials/material-request-modal";
+import { useAuth } from "@/contexts/auth-context";
 
 export default function Materials() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { isLoading: authLoading } = useAuth();
 
   const { data: requests = [], isLoading } = useQuery<MaterialRequest[]>({
     queryKey: ["/api/material-requests"],
+    enabled: !authLoading, // Wait for authentication verification before fetching
   });
 
   const filteredRequests = requests.filter(request => {
