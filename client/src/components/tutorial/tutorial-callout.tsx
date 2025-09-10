@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useTutorial, type TutorialStep } from '@/contexts/tutorial-context';
-import { ChevronLeft, ChevronRight, X, Skip } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, FastForward } from 'lucide-react';
 
 interface TutorialCalloutProps {
   step: TutorialStep;
@@ -116,7 +116,7 @@ export function TutorialCallout({ step, stepNumber, totalSteps, targetRect }: Tu
                 onClick={skipStep}
                 data-testid="button-skip-step"
               >
-                <Skip className="h-4 w-4 mr-1" />
+                <FastForward className="h-4 w-4 mr-1" />
                 Skip
               </Button>
             )}
