@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
-import { Hammer, Plus, Bell, User, LogOut, Settings } from "lucide-react";
+import { Hammer, Plus, Bell, User, LogOut, Settings, Shield } from "lucide-react";
 import TaskModal from "@/components/tasks/task-modal";
 import { LoginModal } from "@/components/auth/login-modal";
 import { useAuth } from "@/contexts/auth-context";
@@ -82,6 +82,19 @@ export default function Header() {
                       : "text-gray-500 hover:text-gray-700"
                   }`}>
                     Reports
+                  </span>
+                </Link>
+              )}
+              
+              {user && hasPermission('manage_users') && (
+                <Link href="/admin">
+                  <span className={`font-medium pb-2 cursor-pointer flex items-center gap-1 ${
+                    isActive("/admin") 
+                      ? "text-primary border-b-2 border-primary" 
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}>
+                    <Shield className="w-4 h-4" />
+                    Admin Panel
                   </span>
                 </Link>
               )}
