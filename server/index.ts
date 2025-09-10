@@ -61,7 +61,7 @@ async function bootstrapDatabase() {
       const adminUser = await storage.createUser(defaultAdmin);
       await storage.approveUser(adminUser.id, adminUser.id, "admin");
       
-      log(`Default admin created: username='admin', password='admin123'`);
+      log(`Default admin created: username='admin'`);
     }
   } catch (error) {
     console.error("Bootstrap database failed:", error);

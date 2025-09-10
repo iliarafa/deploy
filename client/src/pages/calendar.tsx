@@ -7,6 +7,7 @@ import QuickActions from "@/components/dashboard/quick-actions";
 import TaskCategories from "@/components/dashboard/task-categories";
 import RecentActivity from "@/components/dashboard/recent-activity";
 import NotificationSetup from "@/components/notifications/notification-setup";
+import PasswordChangeReminder from "@/components/notifications/password-change-reminder";
 import { useState } from "react";
 
 export default function Calendar() {
@@ -20,6 +21,8 @@ export default function Calendar() {
       <MobileNav />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mb-20 md:mb-0">
+        <PasswordChangeReminder />
+        
         <CalendarControls
           currentDate={currentDate}
           setCurrentDate={setCurrentDate}
