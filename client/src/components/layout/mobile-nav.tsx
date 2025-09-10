@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Calendar, CheckSquare, Package, BarChart3, Shield } from "lucide-react";
+import { Calendar, CheckSquare, Package, BarChart3, Shield, FileText } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 
 export default function MobileNav() {
@@ -26,6 +26,17 @@ export default function MobileNav() {
             <span className="text-xs mt-1">Calendar</span>
           </a>
         </Link>
+        {/* Log tab for workers only */}
+        {user && user.role === 'worker' && (
+          <Link href="/log">
+            <a className={`flex flex-col items-center py-2 px-4 ${
+              isActive("/log") ? "text-primary" : "text-gray-500"
+            }`}>
+              <FileText className="w-5 h-5" />
+              <span className="text-xs mt-1">Log</span>
+            </a>
+          </Link>
+        )}
         {hasFullNavAccess && (
           <Link href="/tasks">
             <a className={`flex flex-col items-center py-2 px-4 ${

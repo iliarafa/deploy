@@ -73,6 +73,7 @@ export interface IStorage {
   getTasks(userId?: number, userRole?: UserRole): Promise<Task[]>;
   getTask(id: number): Promise<Task | undefined>;
   getTasksByDateRange(startDate: Date, endDate: Date, userId?: number, userRole?: UserRole): Promise<Task[]>;
+  getWorkerTasks(username: string): Promise<Task[]>;
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: number, updates: Partial<InsertTask>): Promise<Task>;
   deleteTask(id: number): Promise<void>;
@@ -389,6 +390,18 @@ export class MemStorage implements IStorage {
 
   async deleteTask(id: number): Promise<void> {
     this.tasks.delete(id);
+  }
+
+  async getWorkerTasks(username: string): Promise<Task[]> {
+    // First find the user by username to get their ID
+    const worker = await this.getUserByUsername(username);
+    if (!worker) {
+      return [];
+    }
+    
+    const allTasks = Array.from(this.tasks.values());
+    // Return tasks assigned to the specific worker (assignedTo stores usernames, not IDs)
+    return allTasks.filter(task => task.assignedTo === username);
   }
 
   async getMaterialRequests(userId?: number, userRole?: UserRole): Promise<MaterialRequest[]> {
@@ -756,6 +769,11 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTask(id: number): Promise<void> {
     await db.delete(tasks).where(eq(tasks.id, id));
+  }
+
+  async getWorkerTasks(username: string): Promise<Task[]> {
+    // Return tasks assigned to the specific worker username
+    return await db.select().from(tasks).where(eq(tasks.assignedTo, username));
   }
 
   async getMaterialRequests(userId?: number, userRole?: UserRole): Promise<MaterialRequest[]> {

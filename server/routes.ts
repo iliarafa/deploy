@@ -407,6 +407,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Worker tasks endpoint - get tasks assigned to a specific worker
+  app.get("/api/worker-tasks/:username", authenticate, async (req, res) => {
+    try {
+      const { username } = req.params;
+      const currentUserId = req.user?.id;
+      
+      if (!currentUserId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      // Get current user info to check permissions
+      const currentUser = await storage.getUser(currentUserId);
+      if (!currentUser) {
+        return res.status(401).json({ message: "User not found" });
+      }
+      
+      // Workers can only access their own tasks
+      if (currentUser.role === 'worker' && currentUser.username !== username) {
+        return res.status(403).json({ message: "Access denied. You can only view your own tasks." });
+      }
+      
+      // Admins and managers can view any worker's tasks
+      if (!['admin', 'project_manager'].includes(currentUser.role) && currentUser.username !== username) {
+        return res.status(403).json({ message: "Access denied." });
+      }
+      
+      const tasks = await storage.getWorkerTasks(username);
+      res.json(tasks);
+    } catch (error) {
+      console.error("Error fetching worker tasks:", error);
+      res.status(500).json({ message: "Failed to fetch worker tasks" });
+    }
+  });
+
   app.get("/api/tasks/date-range", authenticate, canAccessResource('task'), addUserContext, async (req, res) => {
     try {
       const { startDate, endDate, userId, userRole } = req.query;

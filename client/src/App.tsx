@@ -13,6 +13,7 @@ import Reports from "@/pages/reports";
 import AdminPanel from "@/pages/admin-panel";
 import Register from "@/pages/register";
 import Login from "@/pages/login";
+import Log from "@/pages/log";
 
 function Router() {
   // Initialize notifications system
@@ -22,6 +23,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Calendar} />
       <Route path="/calendar" component={Calendar} />
+      <Route path="/log" component={Log} />
       <Route path="/tasks" component={Tasks} />
       <Route path="/materials" component={Materials} />
       <Route path="/reports" component={Reports} />
