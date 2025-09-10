@@ -161,6 +161,8 @@ export const updateUserSchema = createInsertSchema(users).pick({
   location: true,
   isActive: true,
   isApproved: true,
+}).extend({
+  lastLogin: z.date().optional(),
 }).partial();
 
 export const reviewRegistrationRequestSchema = z.object({

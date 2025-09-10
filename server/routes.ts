@@ -7,7 +7,8 @@ import {
   insertCommunicationSchema,
   insertUserRegistrationRequestSchema,
   reviewRegistrationRequestSchema,
-  updateUserSchema 
+  updateUserSchema,
+  insertUserSchema 
 } from "@shared/schema";
 import { z } from "zod";
 import { wsManager } from "./websocket";
@@ -233,6 +234,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Deactivate user error:", error);
       res.status(500).json({ message: "Failed to deactivate user" });
+    }
+  });
+
+  app.post("/api/admin/users", authenticate, requireRole('admin'), async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+
+      // Validate the incoming user data
+      const validatedData = insertUserSchema.parse(req.body);
+      
+      // Check if username or email already exists
+      const existingUser = await storage.getUserByUsername(validatedData.username);
+      const existingEmail = await storage.getUserByEmail(validatedData.email);
+      
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+      
+      if (existingEmail) {
+        return res.status(400).json({ message: "Email already registered" });
+      }
+
+      // Create the user with admin-specified settings
+      const newUser = await storage.createUser(validatedData);
+      
+      // If specified, approve the user immediately and set the creator as approver
+      if (req.body.isApproved) {
+        await storage.approveUser(newUser.id, userId, validatedData.role || 'worker');
+      }
+      
+      // Send real-time notification
+      try {
+        wsManager.broadcast({ 
+          type: "user_created", 
+          user: newUser 
+        });
+      } catch (notifError) {
+        console.log("User creation notification failed:", notifError);
+      }
+      
+      // Remove password from response
+      const { password, ...safeUser } = newUser;
+      res.status(201).json(safeUser);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid data", errors: error.errors });
+      } else {
+        console.error("Create user error:", error);
+        res.status(500).json({ message: "Failed to create user" });
+      }
     }
   });
 

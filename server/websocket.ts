@@ -2,7 +2,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
 
 interface WebSocketMessage {
-  type: 'task_created' | 'material_request_created' | 'task_updated' | 'ping';
+  type: 'task_created' | 'material_request_created' | 'task_updated' | 'ping' | 'registration_request' | 'registration_reviewed' | 'user_created' | 'vacancy_created';
   data?: any;
 }
 

@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { UserCheck, UserX, Users, Clock, Shield, Edit } from "lucide-react";
+import { UserCheck, UserX, Users, Clock, Shield, Edit, UserPlus } from "lucide-react";
 import { USER_ROLES } from "@shared/roles";
 import type { 
   UserRegistrationRequest, 
@@ -46,6 +46,19 @@ export default function AdminPanel() {
   const [reviewStatus, setReviewStatus] = useState<'approved' | 'rejected'>('approved');
   const [assignedRole, setAssignedRole] = useState<string>('');
   const [reviewNotes, setReviewNotes] = useState('');
+  
+  // Create user form state
+  const [showCreateUserForm, setShowCreateUserForm] = useState(false);
+  const [createUserForm, setCreateUserForm] = useState({
+    username: '',
+    email: '',
+    password: '',
+    firstName: '',
+    lastName: '',
+    role: 'worker',
+    location: '',
+    isApproved: true
+  });
 
   // Fetch registration requests
   const { data: registrationRequests, isLoading: requestsLoading } = useQuery<UserRegistrationRequest[]>({
@@ -124,10 +137,46 @@ export default function AdminPanel() {
     },
   });
 
+  // Create user mutation
+  const createUserMutation = useMutation({
+    mutationFn: async (userData: typeof createUserForm) => {
+      return await apiRequest('POST', '/api/admin/users', userData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      toast({
+        title: "Success",
+        description: "User created successfully",
+      });
+      setShowCreateUserForm(false);
+      resetCreateUserForm();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to create user",
+        variant: "destructive",
+      });
+    },
+  });
+
   const resetReviewForm = () => {
     setReviewStatus('approved');
     setAssignedRole('');
     setReviewNotes('');
+  };
+
+  const resetCreateUserForm = () => {
+    setCreateUserForm({
+      username: '',
+      email: '',
+      password: '',
+      firstName: '',
+      lastName: '',
+      role: 'worker',
+      location: '',
+      isApproved: true
+    });
   };
 
   const handleReviewSubmit = () => {
@@ -157,6 +206,20 @@ export default function AdminPanel() {
       id: selectedUser.id,
       updates,
     });
+  };
+
+  const handleCreateUser = () => {
+    // Basic validation
+    if (!createUserForm.username || !createUserForm.email || !createUserForm.password) {
+      toast({
+        title: "Error",
+        description: "Username, email, and password are required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createUserMutation.mutate(createUserForm);
   };
 
   const formatDate = (date: Date | string | null) => {
@@ -373,10 +436,141 @@ export default function AdminPanel() {
         <TabsContent value="users" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>User Management</CardTitle>
-              <CardDescription>
-                Manage existing users, roles, and permissions
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>User Management</CardTitle>
+                  <CardDescription>
+                    Manage existing users, roles, and permissions
+                  </CardDescription>
+                </div>
+                <Dialog open={showCreateUserForm} onOpenChange={setShowCreateUserForm}>
+                  <DialogTrigger asChild>
+                    <Button data-testid="create-user-button">
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Create User
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Create New User</DialogTitle>
+                      <DialogDescription>
+                        Create a new user account with credentials and permissions
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="create-username">Username *</Label>
+                          <Input
+                            id="create-username"
+                            value={createUserForm.username}
+                            onChange={(e) => setCreateUserForm(prev => ({ ...prev, username: e.target.value }))}
+                            placeholder="Enter username"
+                            data-testid="create-username-input"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="create-email">Email *</Label>
+                          <Input
+                            id="create-email"
+                            type="email"
+                            value={createUserForm.email}
+                            onChange={(e) => setCreateUserForm(prev => ({ ...prev, email: e.target.value }))}
+                            placeholder="Enter email"
+                            data-testid="create-email-input"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="create-password">Password *</Label>
+                        <Input
+                          id="create-password"
+                          type="password"
+                          value={createUserForm.password}
+                          onChange={(e) => setCreateUserForm(prev => ({ ...prev, password: e.target.value }))}
+                          placeholder="Enter password"
+                          data-testid="create-password-input"
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="create-first-name">First Name</Label>
+                          <Input
+                            id="create-first-name"
+                            value={createUserForm.firstName}
+                            onChange={(e) => setCreateUserForm(prev => ({ ...prev, firstName: e.target.value }))}
+                            placeholder="Enter first name"
+                            data-testid="create-first-name-input"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="create-last-name">Last Name</Label>
+                          <Input
+                            id="create-last-name"
+                            value={createUserForm.lastName}
+                            onChange={(e) => setCreateUserForm(prev => ({ ...prev, lastName: e.target.value }))}
+                            placeholder="Enter last name"
+                            data-testid="create-last-name-input"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="create-role">Role</Label>
+                        <Select value={createUserForm.role} onValueChange={(value) => setCreateUserForm(prev => ({ ...prev, role: value }))}>
+                          <SelectTrigger id="create-role" data-testid="create-role-select">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {USER_ROLES.map((role) => (
+                              <SelectItem key={role} value={role}>
+                                {role.replace('_', ' ')}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="create-location">Location</Label>
+                        <Input
+                          id="create-location"
+                          value={createUserForm.location}
+                          onChange={(e) => setCreateUserForm(prev => ({ ...prev, location: e.target.value }))}
+                          placeholder="Enter location"
+                          data-testid="create-location-input"
+                        />
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="create-approved"
+                          checked={createUserForm.isApproved}
+                          onChange={(e) => setCreateUserForm(prev => ({ ...prev, isApproved: e.target.checked }))}
+                          data-testid="create-approved-checkbox"
+                        />
+                        <Label htmlFor="create-approved">Approve user immediately</Label>
+                      </div>
+                      
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setShowCreateUserForm(false)}>
+                          Cancel
+                        </Button>
+                        <Button 
+                          onClick={handleCreateUser}
+                          disabled={createUserMutation.isPending}
+                          data-testid="submit-create-user"
+                        >
+                          {createUserMutation.isPending ? 'Creating...' : 'Create User'}
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </CardHeader>
             <CardContent>
               {usersLoading ? (
