@@ -330,8 +330,10 @@ export class MemStorage implements IStorage {
 
     // Filter tasks based on user role
     if (userRole === 'worker' && userId) {
-      // Workers can only see tasks assigned to them
-      return allTasks.filter(task => task.assignedTo === userId.toString());
+      // Workers can only see tasks assigned to them (assignedTo stores username, not userId)
+      const user = await this.getUser(userId);
+      if (!user) return [];
+      return allTasks.filter(task => task.assignedTo === user.username);
     }
     
     // Admin, project_manager, supervisor, inspector, client can see all tasks
@@ -354,8 +356,10 @@ export class MemStorage implements IStorage {
 
     // Filter tasks based on user role
     if (userRole === 'worker' && userId) {
-      // Workers can only see tasks assigned to them
-      filteredTasks = filteredTasks.filter(task => task.assignedTo === userId.toString());
+      // Workers can only see tasks assigned to them (assignedTo stores username, not userId)
+      const user = await this.getUser(userId);
+      if (!user) return [];
+      filteredTasks = filteredTasks.filter(task => task.assignedTo === user.username);
     }
 
     return filteredTasks;
@@ -701,8 +705,10 @@ export class DatabaseStorage implements IStorage {
 
     // Filter tasks based on user role
     if (userRole === 'worker' && userId) {
-      // Workers can only see tasks assigned to them
-      return await db.select().from(tasks).where(eq(tasks.assignedTo, userId.toString()));
+      // Workers can only see tasks assigned to them (assignedTo stores username, not userId)
+      const user = await this.getUser(userId);
+      if (!user) return [];
+      return await db.select().from(tasks).where(eq(tasks.assignedTo, user.username));
     }
     
     if (userRole === 'client') {
@@ -731,6 +737,8 @@ export class DatabaseStorage implements IStorage {
 
     // Filter tasks based on user role
     if (userRole === 'worker' && userId) {
+      const user = await this.getUser(userId);
+      if (!user) return [];
       return await db
       .select()
       .from(tasks)
@@ -738,7 +746,7 @@ export class DatabaseStorage implements IStorage {
         and(
           gte(tasks.startDate, startDate),
           lte(tasks.startDate, endDate),
-          eq(tasks.assignedTo, userId.toString())
+          eq(tasks.assignedTo, user.username)
         )
       );
     }

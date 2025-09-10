@@ -469,6 +469,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         endDate: req.body.endDate ? new Date(req.body.endDate) : undefined
       };
       
+      // Auto-assign tasks to the worker who creates them if no assignee is specified
+      if (!taskData.assignedTo && req.user?.role === 'worker') {
+        const creator = await storage.getUser(req.user.id);
+        if (creator) {
+          taskData.assignedTo = creator.username;
+        }
+      }
+      
       const validatedData = insertTaskSchema.parse(taskData);
       const task = await storage.createTask(validatedData);
       
