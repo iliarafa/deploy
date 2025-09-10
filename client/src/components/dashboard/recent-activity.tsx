@@ -2,14 +2,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { type Task, type MaterialRequest } from "@shared/schema";
 import { formatDistanceToNow } from "@/lib/date-utils";
+import { useAuth } from "@/contexts/auth-context";
 
 export default function RecentActivity() {
+  const { isLoading: authLoading } = useAuth();
+
   const { data: tasks = [] } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
+    enabled: !authLoading, // Wait for authentication verification before fetching
   });
 
   const { data: materialRequests = [] } = useQuery<MaterialRequest[]>({
     queryKey: ["/api/material-requests"],
+    enabled: !authLoading, // Wait for authentication verification before fetching
   });
 
   // Combine and sort activities by creation date

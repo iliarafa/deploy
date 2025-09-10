@@ -6,6 +6,7 @@ import { formatDate } from "@/lib/date-utils";
 import { getCategoryColor } from "@/lib/calendar-utils";
 import TaskDetailModal from "@/components/tasks/task-detail-modal";
 import { useState } from "react";
+import { useAuth } from "@/contexts/auth-context";
 
 interface CalendarViewProps {
   currentDate: Date;
@@ -20,9 +21,11 @@ export default function CalendarView({
 }: CalendarViewProps) {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const { isLoading: authLoading } = useAuth();
   
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
+    enabled: !authLoading, // Wait for authentication verification before fetching
   });
 
   const handleTaskClick = (task: Task) => {

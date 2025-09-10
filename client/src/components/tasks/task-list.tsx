@@ -5,10 +5,14 @@ import { type Task } from "@shared/schema";
 import { ChevronRight, Clock, MapPin, User } from "lucide-react";
 import { getCategoryColor } from "@/lib/calendar-utils";
 import { formatTime } from "@/lib/date-utils";
+import { useAuth } from "@/contexts/auth-context";
 
 export default function TaskList() {
+  const { isLoading: authLoading } = useAuth();
+
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
+    enabled: !authLoading, // Wait for authentication verification before fetching
   });
 
   const today = new Date();
