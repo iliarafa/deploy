@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { wsManager } from "./websocket";
+import { storage } from "./storage";
 
 const app = express();
 app.use(express.json());
@@ -37,8 +38,41 @@ app.use((req, res, next) => {
   next();
 });
 
+// Bootstrap function to create default admin if none exists
+async function bootstrapDatabase() {
+  try {
+    // Check if any admin users exist
+    const users = await storage.getUsers();
+    const adminExists = users.some(user => user.role === 'admin');
+    
+    if (!adminExists) {
+      log("No admin users found, creating default admin...");
+      
+      // Create default admin user
+      const defaultAdmin = {
+        username: "admin",
+        password: "admin123", // Simple password for production bootstrap
+        email: "admin@deploy.local",
+        firstName: "System",
+        lastName: "Administrator", 
+        role: "admin" as const
+      };
+      
+      const adminUser = await storage.createUser(defaultAdmin);
+      await storage.approveUser(adminUser.id, adminUser.id, "admin");
+      
+      log(`Default admin created: username='admin', password='admin123'`);
+    }
+  } catch (error) {
+    console.error("Bootstrap database failed:", error);
+  }
+}
+
 (async () => {
   const server = await registerRoutes(app);
+  
+  // Bootstrap database with default admin if needed
+  await bootstrapDatabase();
   
   // Initialize WebSocket manager
   wsManager.init(server);
