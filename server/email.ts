@@ -26,8 +26,8 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
       to: params.to,
       from: params.from,
       subject: params.subject,
-      text: params.text,
-      html: params.html,
+      text: params.text || '',
+      html: params.html || '',
     });
     return true;
   } catch (error) {
@@ -42,15 +42,15 @@ export async function sendTaskNotification(assignedToEmail: string, taskTitle: s
     <p>You have been assigned a new task:</p>
     <h3>${taskTitle}</h3>
     <p>Created by: ${creator}</p>
-    <p>Please check the BuildSync app for full details.</p>
+    <p>Please check the Deploy app for full details.</p>
   `;
   
   return sendEmail({
     to: assignedToEmail,
-    from: 'noreply@buildsync.app', // You'll need to verify this sender in SendGrid
+    from: 'noreply@deploy.app', // You'll need to verify this sender in SendGrid
     subject: `New Task: ${taskTitle}`,
     html,
-    text: `New Task Assigned: ${taskTitle}. Created by: ${creator}. Check the BuildSync app for details.`
+    text: `New Task Assigned: ${taskTitle}. Created by: ${creator}. Check the Deploy app for details.`
   });
 }
 
@@ -60,15 +60,15 @@ export async function sendMaterialRequestNotification(emails: string[], material
     <p>A new material request has been submitted:</p>
     <h3>${materialType}</h3>
     <p>Requested by: ${creator}</p>
-    <p>Please check the BuildSync app for full details.</p>
+    <p>Please check the Deploy app for full details.</p>
   `;
   
   const promises = emails.map(email => sendEmail({
     to: email,
-    from: 'noreply@buildsync.app',
+    from: 'noreply@deploy.app',
     subject: `Material Request: ${materialType}`,
     html,
-    text: `New Material Request: ${materialType}. Requested by: ${creator}. Check the BuildSync app for details.`
+    text: `New Material Request: ${materialType}. Requested by: ${creator}. Check the Deploy app for details.`
   }));
   
   const results = await Promise.all(promises);

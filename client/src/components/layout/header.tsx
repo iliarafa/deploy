@@ -37,7 +37,7 @@ export default function Header() {
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
                 <Hammer className="text-primary text-xl" />
-                <h1 className="text-xl font-bold text-gray-900">BuildSync</h1>
+                <h1 className="text-xl font-bold text-gray-900">Deploy</h1>
               </div>
             </div>
             
@@ -143,7 +143,7 @@ export default function Header() {
                       <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
                         <User className="w-4 h-4 text-primary" />
                       </div>
-                      <div className="hidden md:flex flex-col items-start">
+                      <div className="hidden md:flex flex-col items-center">
                         <span className="text-sm font-medium text-gray-900">{user.username}</span>
                         <Badge variant="outline" className="text-xs">
                           {user.role.replace('_', ' ')}

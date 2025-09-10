@@ -61,7 +61,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ open, onOpenChange }) =>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]" data-testid="modal-login">
         <DialogHeader>
-          <DialogTitle>Login to BuildSync</DialogTitle>
+          <DialogTitle>Login to Deploy</DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleLogin} className="space-y-4">

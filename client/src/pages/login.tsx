@@ -53,7 +53,7 @@ export default function Login() {
       
       toast({
         title: "Login Successful",
-        description: "Welcome back to BuildSync!",
+        description: "Welcome back to Deploy!",
       });
       
       // Redirect to home page
@@ -79,7 +79,7 @@ export default function Login() {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
             <Building2 className="h-8 w-8 text-blue-600" />
           </div>
-          <CardTitle className="text-2xl" data-testid="login-title">Welcome to BuildSync</CardTitle>
+          <CardTitle className="text-2xl" data-testid="login-title">Welcome to Deploy</CardTitle>
           <CardDescription>
             Sign in to access the construction management system
           </CardDescription>
@@ -142,7 +142,7 @@ export default function Login() {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-muted-foreground">New to BuildSync?</span>
+                <span className="bg-white px-2 text-muted-foreground">New to Deploy?</span>
               </div>
             </div>
 
