@@ -3,11 +3,18 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { pbkdf2Sync } from "crypto";
 
-// Password verification utility
+// Password verification and hashing utilities
 function verifyPassword(password: string, hashedPassword: string): boolean {
   const [salt, hash] = hashedPassword.split(':');
   const verifyHash = pbkdf2Sync(password, salt, 10000, 64, 'sha256').toString('hex');
   return hash === verifyHash;
+}
+
+function hashPassword(password: string): string {
+  const { randomBytes } = require('crypto');
+  const salt = randomBytes(32).toString('hex');
+  const hash = pbkdf2Sync(password, salt, 10000, 64, 'sha256').toString('hex');
+  return `${salt}:${hash}`;
 }
 import { 
   insertTaskSchema, 
@@ -16,7 +23,8 @@ import {
   insertUserRegistrationRequestSchema,
   reviewRegistrationRequestSchema,
   updateUserSchema,
-  insertUserSchema 
+  insertUserSchema,
+  changePasswordSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { wsManager } from "./websocket";
@@ -26,7 +34,8 @@ import {
   requirePermission, 
   requireRole, 
   canAccessResource, 
-  addUserContext 
+  addUserContext,
+  enforcePasswordChange
 } from "./auth-middleware";
 import { type UserRole } from "@shared/roles";
 
@@ -118,6 +127,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to get user information" });
     }
   });
+
+  // Password change route (accessible even when mustChangePassword=true)
+  app.put("/api/auth/change-password", authenticate, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+
+      const validatedData = changePasswordSchema.parse(req.body);
+      
+      // Get current user to verify password
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Verify current password
+      const isValidPassword = user.password.includes(':') 
+        ? verifyPassword(validatedData.currentPassword, user.password)
+        : validatedData.currentPassword === user.password; // Temporary fallback
+
+      if (!isValidPassword) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+
+      // Hash new password and update user
+      const hashedNewPassword = hashPassword(validatedData.newPassword);
+      const updatedUser = await storage.updateUserPassword(userId, hashedNewPassword);
+
+      const { password, ...safeUser } = updatedUser;
+      res.json({ 
+        message: "Password changed successfully",
+        user: safeUser
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid data", errors: error.errors });
+      } else {
+        console.error("Change password error:", error);
+        res.status(500).json({ message: "Failed to change password" });
+      }
+    }
+  });
   
   // User registration routes
   app.post("/api/register", async (req, res) => {
@@ -163,7 +216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin routes for user management
-  app.get("/api/admin/registration-requests", authenticate, requireRole('admin'), async (req, res) => {
+  app.get("/api/admin/registration-requests", authenticate, enforcePasswordChange, requireRole('admin'), async (req, res) => {
     try {
       const requests = await storage.getRegistrationRequests();
       res.json(requests);
@@ -173,7 +226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/admin/registration-requests/:id/review", authenticate, requireRole('admin'), async (req, res) => {
+  app.put("/api/admin/registration-requests/:id/review", authenticate, enforcePasswordChange, requireRole('admin'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const userId = req.user?.id;
@@ -206,7 +259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/users", authenticate, requireRole('admin'), async (req, res) => {
+  app.get("/api/admin/users", authenticate, enforcePasswordChange, requireRole('admin'), async (req, res) => {
     try {
       const users = await storage.getUsers();
       // Remove passwords from response
@@ -218,7 +271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/admin/users/:id", authenticate, requireRole('admin'), async (req, res) => {
+  app.put("/api/admin/users/:id", authenticate, enforcePasswordChange, requireRole('admin'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const validatedData = updateUserSchema.parse(req.body);
@@ -237,7 +290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/users/:id", authenticate, requireRole('admin'), async (req, res) => {
+  app.delete("/api/admin/users/:id", authenticate, enforcePasswordChange, requireRole('admin'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deactivateUser(id);
@@ -248,7 +301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/users", authenticate, requireRole('admin'), async (req, res) => {
+  app.post("/api/admin/users", authenticate, enforcePasswordChange, requireRole('admin'), async (req, res) => {
     try {
       const userId = req.user?.id;
       
@@ -316,7 +369,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/users/profile", authenticate, async (req, res) => {
+  app.get("/api/users/profile", authenticate, enforcePasswordChange, async (req, res) => {
     try {
       const userId = req.user?.id;
       if (!userId) {
@@ -336,20 +389,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/users/profile", authenticate, async (req, res) => {
+  app.put("/api/users/profile", authenticate, enforcePasswordChange, async (req, res) => {
     try {
       const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ message: "User ID not found" });
       }
       
-      // Users can only update their own basic profile info (not role/permissions)
+      // Users can only update their own basic profile info (not role/permissions/security flags)
       const allowedUpdates = {
         firstName: req.body.firstName,
         lastName: req.body.lastName,
         email: req.body.email,
         location: req.body.location
       };
+      
+      // Remove any security-related fields that users shouldn't be able to change
+      delete req.body.mustChangePassword;
+      delete req.body.role;
+      delete req.body.permissions;
+      delete req.body.isActive;
+      delete req.body.isApproved;
+      delete req.body.password;
+      delete req.body.passwordLastChangedAt;
       
       const updatedUser = await storage.updateUser(userId, allowedUpdates);
       const { password, ...safeUser } = updatedUser;
@@ -362,7 +424,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Users endpoint for task assignment (accessible by users with task permissions)
-  app.get("/api/users", authenticate, async (req, res) => {
+  app.get("/api/users", authenticate, enforcePasswordChange, async (req, res) => {
     try {
       const users = await storage.getUsers();
       // Remove passwords and return only essential user info for task assignment
@@ -383,7 +445,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Task routes with authorization
-  app.get("/api/tasks", authenticate, canAccessResource('task'), addUserContext, async (req, res) => {
+  app.get("/api/tasks", authenticate, enforcePasswordChange, canAccessResource('task'), addUserContext, async (req, res) => {
     try {
       const userId = parseInt(req.query.userId as string);
       const userRole = req.query.userRole as UserRole;
@@ -394,7 +456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/tasks/:id", async (req, res) => {
+  app.get("/api/tasks/:id", authenticate, enforcePasswordChange, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const task = await storage.getTask(id);
@@ -408,7 +470,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Worker tasks endpoint - get tasks assigned to a specific worker
-  app.get("/api/worker-tasks/:username", authenticate, async (req, res) => {
+  app.get("/api/worker-tasks/:username", authenticate, enforcePasswordChange, async (req, res) => {
     try {
       const { username } = req.params;
       const currentUserId = req.user?.id;
@@ -441,7 +503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/tasks/date-range", authenticate, canAccessResource('task'), addUserContext, async (req, res) => {
+  app.get("/api/tasks/date-range", authenticate, enforcePasswordChange, canAccessResource('task'), addUserContext, async (req, res) => {
     try {
       const { startDate, endDate, userId, userRole } = req.query;
       if (!startDate || !endDate) {
@@ -460,7 +522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/tasks", authenticate, requirePermission('create_task'), async (req, res) => {
+  app.post("/api/tasks", authenticate, enforcePasswordChange, requirePermission('create_task'), async (req, res) => {
     try {
       // Convert date fields from strings to Date objects if needed
       const taskData = {
@@ -511,7 +573,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/tasks/:id", authenticate, requirePermission('edit_task'), async (req, res) => {
+  app.put("/api/tasks/:id", authenticate, enforcePasswordChange, requirePermission('edit_task'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const validatedData = insertTaskSchema.partial().parse(req.body);
@@ -528,7 +590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/tasks/:id", authenticate, requirePermission('delete_task'), async (req, res) => {
+  app.delete("/api/tasks/:id", authenticate, enforcePasswordChange, requirePermission('delete_task'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteTask(id);
@@ -539,7 +601,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Material request routes with authorization
-  app.get("/api/material-requests", authenticate, canAccessResource('material'), addUserContext, async (req, res) => {
+  app.get("/api/material-requests", authenticate, enforcePasswordChange, canAccessResource('material'), addUserContext, async (req, res) => {
     try {
       const userId = parseInt(req.query.userId as string);
       const userRole = req.query.userRole as UserRole;
@@ -550,7 +612,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/material-requests/:id", async (req, res) => {
+  app.get("/api/material-requests/:id", authenticate, enforcePasswordChange, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const request = await storage.getMaterialRequest(id);
@@ -563,7 +625,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/material-requests", async (req, res) => {
+  app.post("/api/material-requests", authenticate, enforcePasswordChange, async (req, res) => {
     try {
       // Convert deliveryDate from string to Date object if needed
       const requestData = {
@@ -597,7 +659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/material-requests/:id", async (req, res) => {
+  app.put("/api/material-requests/:id", authenticate, enforcePasswordChange, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const validatedData = insertMaterialRequestSchema.partial().parse(req.body);
@@ -614,7 +676,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/material-requests/:id", async (req, res) => {
+  app.delete("/api/material-requests/:id", authenticate, enforcePasswordChange, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteMaterialRequest(id);
@@ -625,7 +687,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Communication routes
-  app.get("/api/communications", async (req, res) => {
+  app.get("/api/communications", authenticate, enforcePasswordChange, async (req, res) => {
     try {
       const communications = await storage.getCommunications();
       res.json(communications);
@@ -634,7 +696,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/communications/task/:taskId", async (req, res) => {
+  app.get("/api/communications/task/:taskId", authenticate, enforcePasswordChange, async (req, res) => {
     try {
       const taskId = parseInt(req.params.taskId);
       const communications = await storage.getCommunicationsByTask(taskId);
@@ -644,7 +706,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/communications", async (req, res) => {
+  app.post("/api/communications", authenticate, enforcePasswordChange, async (req, res) => {
     try {
       const validatedData = insertCommunicationSchema.parse(req.body);
       const communication = await storage.createCommunication(validatedData);
@@ -658,7 +720,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Vacancy routes
-  app.get("/api/vacancies", async (req, res) => {
+  app.get("/api/vacancies", authenticate, enforcePasswordChange, async (req, res) => {
     try {
       const vacancies = await storage.getVacancies();
       res.json(vacancies);
@@ -668,7 +730,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/vacancies/:id", async (req, res) => {
+  app.get("/api/vacancies/:id", authenticate, enforcePasswordChange, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const vacancy = await storage.getVacancy(id);
@@ -682,7 +744,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/vacancies", async (req, res) => {
+  app.post("/api/vacancies", authenticate, enforcePasswordChange, async (req, res) => {
     try {
       const validatedData = { 
         property: req.body.property,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Lock, X } from 'lucide-react';
@@ -8,16 +8,27 @@ export default function PasswordChangeReminder() {
   const [dismissed, setDismissed] = useState(false);
   const { user } = useAuth();
   
-  // Check if user is likely using a default password
-  const isDefaultPassword = user && (
-    user.username === 'admin' || 
-    user.username === 'demo' || 
-    user.username === 'test' ||
-    user.username === 'manager' ||
-    user.username === 'worker'
-  );
+  // Check dismissal state from localStorage on mount
+  useEffect(() => {
+    if (user?.id) {
+      const dismissalKey = `password-reminder-dismissed-${user.id}`;
+      const isDismissed = localStorage.getItem(dismissalKey) === 'true';
+      setDismissed(isDismissed);
+    }
+  }, [user?.id]);
   
-  if (!isDefaultPassword || dismissed) {
+  const handleDismiss = () => {
+    if (user?.id) {
+      const dismissalKey = `password-reminder-dismissed-${user.id}`;
+      localStorage.setItem(dismissalKey, 'true');
+      setDismissed(true);
+    }
+  };
+  
+  // Check if user must change password (server-driven)
+  const shouldShowReminder = user && user.mustChangePassword && !dismissed;
+  
+  if (!shouldShowReminder) {
     return null;
   }
 
@@ -26,12 +37,12 @@ export default function PasswordChangeReminder() {
       <Lock className="h-4 w-4 text-amber-600" />
       <AlertDescription className="flex items-center justify-between">
         <span className="text-amber-800">
-          For better security, consider changing your password in your profile settings.
+          You must change your password for security reasons. Please update it in your profile settings.
         </span>
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setDismissed(true)}
+          onClick={handleDismiss}
           className="text-amber-600 hover:text-amber-800"
           data-testid="dismiss-password-reminder"
         >

@@ -52,6 +52,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, updates: UpdateUser): Promise<User>;
+  updateUserPassword(id: number, hashedPassword: string): Promise<User>;
   getUsers(): Promise<User[]>;
   deactivateUser(id: number): Promise<User>;
   approveUser(id: number, approvedBy: number, role: string): Promise<User>;
@@ -167,6 +168,8 @@ export class MemStorage implements IStorage {
       approvedBy: null,
       approvedAt: null,
       lastLogin: null,
+      mustChangePassword: false,
+      passwordLastChangedAt: new Date(),
       createdAt: new Date()
     };
     this.users.set(id, user);
@@ -179,6 +182,21 @@ export class MemStorage implements IStorage {
       throw new Error(`User with id ${id} not found`);
     }
     const updatedUser = { ...existingUser, ...updates };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+
+  async updateUserPassword(id: number, hashedPassword: string): Promise<User> {
+    const existingUser = this.users.get(id);
+    if (!existingUser) {
+      throw new Error(`User with id ${id} not found`);
+    }
+    const updatedUser = { 
+      ...existingUser, 
+      password: hashedPassword,
+      mustChangePassword: false,
+      passwordLastChangedAt: new Date()
+    };
     this.users.set(id, updatedUser);
     return updatedUser;
   }
@@ -553,6 +571,22 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(users)
       .set(updates)
+      .where(eq(users.id, id))
+      .returning();
+    if (!user) {
+      throw new Error(`User with id ${id} not found`);
+    }
+    return user;
+  }
+
+  async updateUserPassword(id: number, hashedPassword: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ 
+        password: hashedPassword,
+        mustChangePassword: false,
+        passwordLastChangedAt: new Date()
+      })
       .where(eq(users.id, id))
       .returning();
     if (!user) {

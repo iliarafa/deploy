@@ -127,3 +127,38 @@ export const addUserContext = (req: Request, res: Response, next: NextFunction) 
 
   next();
 };
+
+// Password change enforcement middleware
+export const enforcePasswordChange = async (req: Request, res: Response, next: NextFunction) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  // Get full user details to check mustChangePassword flag
+  const user = await storage.getUser(req.user.id);
+  if (!user) {
+    return res.status(401).json({ error: 'User not found' });
+  }
+
+  // If user must change password, only allow access to password change and logout routes
+  if (user.mustChangePassword) {
+    const allowedPaths = [
+      '/api/auth/change-password',
+      '/api/auth/logout',
+      '/api/auth/user' // Allow user info access for UI
+    ];
+    
+    const currentPath = req.path;
+    const isAllowedPath = allowedPaths.some(path => currentPath.startsWith(path));
+    
+    if (!isAllowedPath) {
+      return res.status(403).json({ 
+        error: 'Password change required',
+        message: 'You must change your password before accessing other features',
+        mustChangePassword: true
+      });
+    }
+  }
+
+  next();
+};

@@ -18,6 +18,8 @@ export const users = pgTable("users", {
   isApproved: boolean("is_approved").notNull().default(false),
   approvedBy: integer("approved_by"), // Admin user who approved
   approvedAt: timestamp("approved_at"),
+  mustChangePassword: boolean("must_change_password").notNull().default(false),
+  passwordLastChangedAt: timestamp("password_last_changed_at"),
   lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -161,14 +163,25 @@ export const updateUserSchema = createInsertSchema(users).pick({
   location: true,
   isActive: true,
   isApproved: true,
+  mustChangePassword: true,
 }).extend({
   lastLogin: z.date().optional(),
+  passwordLastChangedAt: z.date().optional(),
 }).partial();
 
 export const reviewRegistrationRequestSchema = z.object({
   status: z.enum(["approved", "rejected"]),
   reviewNotes: z.string().optional(),
   assignedRole: z.string().optional(),
+});
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(8, "Password must be at least 8 characters long"),
+  confirmPassword: z.string().min(1, "Password confirmation is required"),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
 export const insertTaskSchema = createInsertSchema(tasks).omit({
@@ -207,3 +220,4 @@ export type Communication = typeof communications.$inferSelect;
 export type InsertCommunication = z.infer<typeof insertCommunicationSchema>;
 export type Vacancy = typeof vacancies.$inferSelect;
 export type InsertVacancy = z.infer<typeof insertVacancySchema>;
+export type ChangePassword = z.infer<typeof changePasswordSchema>;
