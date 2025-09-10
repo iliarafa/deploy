@@ -36,6 +36,7 @@ export default function TaskStatusUpdate({ task, compact = false }: TaskStatusUp
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/worker-tasks"] });
       toast({
         title: "Status Updated",
         description: `Task status changed to ${selectedStatus}`,

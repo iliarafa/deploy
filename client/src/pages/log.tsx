@@ -8,14 +8,23 @@ import { Calendar, MapPin, User, Clock } from "lucide-react";
 import { formatDate } from "@/lib/date-utils";
 import { getCategoryColor } from "@/lib/calendar-utils";
 import { useAuth } from "@/contexts/auth-context";
+import TaskDetailModal from "@/components/tasks/task-detail-modal";
+import { useState } from "react";
 
 export default function Log() {
   const { user } = useAuth();
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/worker-tasks", user?.username],
     enabled: !!user?.username,
   });
+
+  const handleTaskClick = (task: Task) => {
+    setSelectedTask(task);
+    setIsDetailModalOpen(true);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -68,7 +77,12 @@ export default function Log() {
         ) : (
           <div className="space-y-4">
             {activeTasks.map((task) => (
-              <Card key={task.id} className="hover:shadow-md transition-shadow" data-testid={`log-task-${task.id}`}>
+              <Card 
+                key={task.id} 
+                className="hover:shadow-md transition-shadow cursor-pointer" 
+                data-testid={`log-task-${task.id}`}
+                onClick={() => handleTaskClick(task)}
+              >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -126,6 +140,12 @@ export default function Log() {
           </div>
         )}
       </main>
+
+      <TaskDetailModal 
+        task={selectedTask}
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+      />
     </div>
   );
 }
