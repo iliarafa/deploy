@@ -4,6 +4,9 @@ import { Server } from 'http';
 interface WebSocketMessage {
   type: 'task_created' | 'material_request_created' | 'task_updated' | 'ping' | 'registration_request' | 'registration_reviewed' | 'user_created' | 'vacancy_created';
   data?: any;
+  request?: any;
+  user?: any;
+  vacancy?: any;
 }
 
 class WebSocketManager {

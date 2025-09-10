@@ -211,6 +211,9 @@ export class MemStorage implements IStorage {
     const registrationRequest: UserRegistrationRequest = { 
       ...request, 
       id,
+      requestedRole: request.requestedRole || "worker",
+      location: request.location || null,
+      reasonForAccess: request.reasonForAccess || null,
       status: "pending",
       reviewedBy: null,
       reviewedAt: null,
@@ -293,11 +296,13 @@ export class MemStorage implements IStorage {
 
   async cleanExpiredSessions(): Promise<void> {
     const now = new Date();
-    for (const [token, session] of this.sessions.entries()) {
+    const expiredTokens: string[] = [];
+    this.sessions.forEach((session, token) => {
       if (session.expiresAt <= now) {
-        this.sessions.delete(token);
+        expiredTokens.push(token);
       }
-    }
+    });
+    expiredTokens.forEach(token => this.sessions.delete(token));
   }
 
   async getUsers(): Promise<User[]> {
@@ -473,6 +478,9 @@ export class MemStorage implements IStorage {
       ...insertVacancy, 
       id, 
       status: insertVacancy.status || "vacant",
+      notes: insertVacancy.notes || null,
+      previousTenantDuration: insertVacancy.previousTenantDuration || null,
+      images: insertVacancy.images || null,
       createdAt: new Date()
     };
     this.vacancies.set(id, vacancy);

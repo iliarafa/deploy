@@ -1,6 +1,14 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { pbkdf2Sync } from "crypto";
+
+// Password verification utility
+function verifyPassword(password: string, hashedPassword: string): boolean {
+  const [salt, hash] = hashedPassword.split(':');
+  const verifyHash = pbkdf2Sync(password, salt, 10000, 64, 'sha256').toString('hex');
+  return hash === verifyHash;
+}
 import { 
   insertTaskSchema, 
   insertMaterialRequestSchema, 
@@ -49,26 +57,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Account has been deactivated. Please contact an administrator." });
       }
       
-      // TODO: Verify password - for now allowing demo accounts
-      const isDemoAccount = ['admin', 'manager', 'worker'].includes(username);
-      if (isDemoAccount) {
-        // Create session
-        const sessionExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-        const session = await storage.createSession(user.id, sessionExpiry);
-        
-        // Update last login
-        await storage.updateUser(user.id, { lastLogin: new Date() });
-        
-        // Remove password from response
-        const { password: _, ...safeUser } = user;
-        
-        res.json({
-          user: safeUser,
-          sessionToken: session.sessionToken
-        });
-      } else {
+      // Verify password using proper verification
+      const isValidPassword = user.password.includes(':') 
+        ? await verifyPassword(password, user.password)
+        : password === user.password; // Fallback for demo accounts without hashed passwords
+      
+      if (!isValidPassword) {
         return res.status(401).json({ message: "Invalid username or password" });
       }
+      
+      // Create session
+      const sessionExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+      const session = await storage.createSession(user.id, sessionExpiry);
+      
+      // Update last login
+      await storage.updateUser(user.id, { lastLogin: new Date() });
+      
+      // Remove password from response
+      const { password: _, ...safeUser } = user;
+      
+      res.json({
+        user: safeUser,
+        sessionToken: session.sessionToken
+      });
     } catch (error) {
       console.error("Login error:", error);
       res.status(500).json({ message: "Login failed" });
@@ -264,8 +275,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newUser = await storage.createUser(validatedData);
       
       // If specified, approve the user immediately and set the creator as approver
-      if (req.body.isApproved) {
-        await storage.approveUser(newUser.id, userId, validatedData.role || 'worker');
+      if (req.body.isApproved === true) {
+        const updatedUser = await storage.approveUser(newUser.id, userId, validatedData.role || 'worker');
+        // Remove password from response
+        const { password, ...safeUser } = updatedUser;
+        
+        // Send real-time notification
+        try {
+          wsManager.broadcast({ 
+            type: "user_created", 
+            user: safeUser 
+          });
+        } catch (notifError) {
+          console.log("User creation notification failed:", notifError);
+        }
+        
+        return res.status(201).json(safeUser);
       }
       
       // Send real-time notification

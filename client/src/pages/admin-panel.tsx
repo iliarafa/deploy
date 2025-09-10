@@ -59,6 +59,10 @@ export default function AdminPanel() {
     location: '',
     isApproved: true
   });
+  
+  // Edit user form state
+  const [editUserRole, setEditUserRole] = useState<string>('');
+  const [editUserActive, setEditUserActive] = useState<boolean>(true);
 
   // Fetch registration requests
   const { data: registrationRequests, isLoading: requestsLoading } = useQuery<UserRegistrationRequest[]>({
@@ -198,8 +202,8 @@ export default function AdminPanel() {
     if (!selectedUser) return;
 
     const updates: UpdateUser = {
-      role: (document.getElementById('user-role') as HTMLInputElement)?.value || selectedUser.role,
-      isActive: (document.getElementById('user-active') as HTMLInputElement)?.checked !== false,
+      role: editUserRole || selectedUser.role,
+      isActive: editUserActive,
     };
 
     updateUserMutation.mutate({
@@ -626,7 +630,11 @@ export default function AdminPanel() {
                               <Button 
                                 size="sm" 
                                 variant="outline"
-                                onClick={() => setSelectedUser(user)}
+                                onClick={() => {
+                                  setSelectedUser(user);
+                                  setEditUserRole(user.role);
+                                  setEditUserActive(user.isActive);
+                                }}
                                 data-testid={`edit-user-${user.id}`}
                               >
                                 <Edit className="h-4 w-4 mr-2" />
@@ -643,7 +651,7 @@ export default function AdminPanel() {
                               <div className="space-y-4">
                                 <div>
                                   <Label htmlFor="user-role">Role</Label>
-                                  <Select defaultValue={selectedUser?.role}>
+                                  <Select value={editUserRole} onValueChange={setEditUserRole}>
                                     <SelectTrigger id="user-role" data-testid="edit-user-role">
                                       <SelectValue />
                                     </SelectTrigger>
@@ -661,7 +669,8 @@ export default function AdminPanel() {
                                   <input
                                     type="checkbox"
                                     id="user-active"
-                                    defaultChecked={selectedUser?.isActive}
+                                    checked={editUserActive}
+                                    onChange={(e) => setEditUserActive(e.target.checked)}
                                     data-testid="edit-user-active"
                                   />
                                   <Label htmlFor="user-active">Active User</Label>
