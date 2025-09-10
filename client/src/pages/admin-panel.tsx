@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Header from "@/components/layout/header";
+import MobileNav from "@/components/layout/mobile-nav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -259,14 +261,19 @@ export default function AdminPanel() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6" data-testid="admin-panel">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold" data-testid="admin-panel-title">Admin Panel</h1>
-        <div className="flex items-center gap-2">
-          <Shield className="h-6 w-6 text-blue-600" />
-          <span className="text-sm text-muted-foreground">Administrator Access</span>
-        </div>
-      </div>
+    <div className="min-h-screen bg-neutral">
+      <Header />
+      <MobileNav />
+      
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mb-20 md:mb-0">
+        <div className="container mx-auto space-y-6" data-testid="admin-panel">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold" data-testid="admin-panel-title">Admin Panel</h1>
+            <div className="flex items-center gap-2">
+              <Shield className="h-6 w-6 text-blue-600" />
+              <span className="text-sm text-muted-foreground">Administrator Access</span>
+            </div>
+          </div>
 
       <Tabs defaultValue="requests" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
@@ -735,6 +742,8 @@ export default function AdminPanel() {
           </Card>
         </TabsContent>
       </Tabs>
+        </div>
+      </main>
     </div>
   );
 }

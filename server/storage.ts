@@ -149,9 +149,12 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.currentUserId++;
+    // Hash password before storing - CRITICAL SECURITY FIX
+    const hashedPassword = hashPassword(insertUser.password);
     const user: User = { 
       ...insertUser,
       id,
+      password: hashedPassword,
       firstName: insertUser.firstName || null,
       lastName: insertUser.lastName || null,
       role: insertUser.role || "worker",

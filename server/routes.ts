@@ -59,8 +59,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Verify password using proper verification
       const isValidPassword = user.password.includes(':') 
-        ? await verifyPassword(password, user.password)
-        : password === user.password; // Fallback for demo accounts without hashed passwords
+        ? verifyPassword(password, user.password)
+        : password === user.password; // Temporary fallback for existing demo accounts
       
       if (!isValidPassword) {
         return res.status(401).json({ message: "Invalid username or password" });
