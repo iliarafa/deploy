@@ -26,6 +26,9 @@ export default function Header() {
     return false;
   };
 
+  // Check if user has full navigation access (admin and managers only)
+  const hasFullNavAccess = user && (user.role === 'admin' || user.role === 'project_manager');
+
   return (
     <>
       <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
@@ -50,7 +53,7 @@ export default function Header() {
                 </span>
               </Link>
               
-              {user && hasPermission('view_all_tasks') && (
+              {hasFullNavAccess && hasPermission('view_all_tasks') && (
                 <Link href="/tasks">
                   <span className={`font-medium pb-2 cursor-pointer ${
                     isActive("/tasks") 
@@ -62,7 +65,7 @@ export default function Header() {
                 </Link>
               )}
               
-              {user && hasPermission('view_all_materials') && (
+              {hasFullNavAccess && hasPermission('view_all_materials') && (
                 <Link href="/materials">
                   <span className={`font-medium pb-2 cursor-pointer ${
                     isActive("/materials") 
@@ -74,7 +77,7 @@ export default function Header() {
                 </Link>
               )}
               
-              {user && hasPermission('view_reports') && (
+              {hasFullNavAccess && hasPermission('view_reports') && (
                 <Link href="/reports">
                   <span className={`font-medium pb-2 cursor-pointer ${
                     isActive("/reports") 
@@ -86,7 +89,7 @@ export default function Header() {
                 </Link>
               )}
               
-              {user && hasPermission('manage_users') && (
+              {hasFullNavAccess && (
                 <Link href="/admin">
                   <span className={`font-medium pb-2 cursor-pointer flex items-center gap-1 ${
                     isActive("/admin") 
@@ -102,7 +105,7 @@ export default function Header() {
 
             <div className="flex items-center space-x-4">
               {/* Role-based Action Buttons */}
-              {user && hasPermission('create_task') && (
+              {user && (
                 <Button 
                   className="bg-primary text-white hover:bg-blue-700"
                   onClick={() => setIsTaskModalOpen(true)}
