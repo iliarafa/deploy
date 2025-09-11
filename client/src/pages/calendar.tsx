@@ -32,11 +32,20 @@ export default function Calendar() {
           setSearchTerm={setSearchTerm}
         />
         
-        <CalendarView
-          currentDate={currentDate}
-          view={view}
-          searchTerm={searchTerm}
-        />
+        {/* Calendar and Quick Actions Side-by-Side */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+          <div className="lg:col-span-3">
+            <CalendarView
+              currentDate={currentDate}
+              view={view}
+              searchTerm={searchTerm}
+            />
+          </div>
+          
+          <div className="lg:col-span-1">
+            <QuickActions />
+          </div>
+        </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
@@ -45,7 +54,6 @@ export default function Calendar() {
           
           <div className="space-y-6">
             <NotificationSetup />
-            <QuickActions />
             <TaskCategories />
             <RecentActivity />
           </div>
