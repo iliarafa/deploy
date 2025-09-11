@@ -16,7 +16,7 @@ export default function Calendar() {
   const [searchTerm, setSearchTerm] = useState("");
 
   return (
-    <div className="min-h-screen bg-neutral">
+    <div className="min-h-screen bg-neutral dark:bg-gray-900">
       <Header />
       <MobileNav />
       

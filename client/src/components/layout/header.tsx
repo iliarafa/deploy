@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { Hammer, Plus, Bell, User, LogOut, Settings, Shield } from "lucide-react";
 import TaskModal from "@/components/tasks/task-modal";
 import { LoginModal } from "@/components/auth/login-modal";
+import ThemeToggle from "@/components/theme-toggle";
 import { useAuth } from "@/contexts/auth-context";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -31,13 +32,13 @@ export default function Header() {
 
   return (
     <>
-      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+      <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
                 <Hammer className="text-primary text-xl" />
-                <h1 className="text-xl font-bold text-gray-900">Deploy</h1>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Deploy</h1>
               </div>
             </div>
             
@@ -47,7 +48,7 @@ export default function Header() {
                 <span className={`font-medium pb-2 cursor-pointer ${
                   isActive("/") 
                     ? "text-primary border-b-2 border-primary" 
-                    : "text-gray-500 hover:text-gray-700"
+                    : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
                 }`}>
                   Calendar
                 </span>
@@ -131,9 +132,12 @@ export default function Header() {
               
               {user && (
                 <Button variant="ghost" size="sm" data-testid="button-notifications">
-                  <Bell className="w-5 h-5 text-gray-500" />
+                  <Bell className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                 </Button>
               )}
+              
+              {/* Theme Toggle */}
+              <ThemeToggle />
               
               {/* User Menu or Login Button */}
               {isAuthenticated && user ? (

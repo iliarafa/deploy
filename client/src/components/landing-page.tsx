@@ -30,15 +30,15 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* App Brand */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-3 mb-4">
             <Hammer className="text-primary text-4xl" />
-            <h1 className="text-4xl font-bold text-gray-900">Deploy</h1>
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-white">Deploy</h1>
           </div>
-          <p className="text-gray-600">Property Management System</p>
+          <p className="text-gray-600 dark:text-gray-300">Property Management System</p>
         </div>
 
         {/* Login Card */}
