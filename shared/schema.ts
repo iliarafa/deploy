@@ -8,6 +8,8 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   email: text("email").notNull().unique(),
+  phone: text("phone"),
+  birthDate: timestamp("birth_date"),
   firstName: text("first_name"),
   lastName: text("last_name"),
   role: text("role").notNull().default("worker"),
@@ -159,6 +161,8 @@ export const updateUserSchema = createInsertSchema(users).pick({
   firstName: true,
   lastName: true,
   email: true,
+  phone: true,
+  birthDate: true,
   role: true,
   location: true,
   isActive: true,
@@ -167,6 +171,20 @@ export const updateUserSchema = createInsertSchema(users).pick({
 }).extend({
   lastLogin: z.date().optional(),
   passwordLastChangedAt: z.date().optional(),
+}).partial();
+
+export const updateProfileSchema = createInsertSchema(users).pick({
+  firstName: true,
+  lastName: true,
+  email: true,
+  phone: true,
+  birthDate: true,
+}).extend({
+  firstName: z.string().optional().nullable(),
+  lastName: z.string().optional().nullable(),
+  email: z.string().email().optional(),
+  phone: z.string().optional().nullable(),
+  birthDate: z.date().optional().nullable(),
 }).partial();
 
 export const reviewRegistrationRequestSchema = z.object({
@@ -207,6 +225,7 @@ export const insertVacancySchema = createInsertSchema(vacancies).omit({
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpdateUser = z.infer<typeof updateUserSchema>;
+export type UpdateProfile = z.infer<typeof updateProfileSchema>;
 export type UserRegistrationRequest = typeof userRegistrationRequests.$inferSelect;
 export type InsertUserRegistrationRequest = z.infer<typeof insertUserRegistrationRequestSchema>;
 export type ReviewRegistrationRequest = z.infer<typeof reviewRegistrationRequestSchema>;

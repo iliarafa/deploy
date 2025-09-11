@@ -401,6 +401,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         firstName: req.body.firstName,
         lastName: req.body.lastName,
         email: req.body.email,
+        phone: req.body.phone,
+        birthDate: req.body.birthDate ? new Date(req.body.birthDate) : null,
         location: req.body.location
       };
       

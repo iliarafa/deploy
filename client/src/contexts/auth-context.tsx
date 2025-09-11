@@ -6,12 +6,16 @@ interface User {
   id: number;
   username: string;
   email: string;
+  phone?: string;
+  birthDate?: string;
   firstName?: string;
   lastName?: string;
   role: UserRole;
   permissions: Permission[];
   isActive: boolean;
   isApproved: boolean;
+  mustChangePassword?: boolean;
+  createdAt?: string;
 }
 
 interface AuthContextType {

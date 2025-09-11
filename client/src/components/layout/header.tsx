@@ -152,9 +152,11 @@ export default function Header() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuItem data-testid="menu-profile">
-                      <User className="w-4 h-4 mr-2" />
-                      Profile
+                    <DropdownMenuItem data-testid="menu-profile" asChild>
+                      <Link href="/profile">
+                        <User className="w-4 h-4 mr-2" />
+                        Profile
+                      </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem data-testid="menu-settings">
                       <Settings className="w-4 h-4 mr-2" />
