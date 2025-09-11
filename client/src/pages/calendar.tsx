@@ -9,11 +9,27 @@ import RecentActivity from "@/components/dashboard/recent-activity";
 import NotificationSetup from "@/components/notifications/notification-setup";
 import PasswordChangeReminder from "@/components/notifications/password-change-reminder";
 import { useState } from "react";
+import TaskModal from "@/components/tasks/task-modal";
 
 export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<"month" | "week" | "day">("month");
   const [searchTerm, setSearchTerm] = useState("");
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [prefilledDate, setPrefilledDate] = useState<Date | undefined>();
+  const [prefilledTime, setPrefilledTime] = useState<string | undefined>();
+
+  const handleCreateTask = (date: Date, time?: string) => {
+    setPrefilledDate(date);
+    setPrefilledTime(time);
+    setIsTaskModalOpen(true);
+  };
+
+  const handleCloseTaskModal = () => {
+    setIsTaskModalOpen(false);
+    setPrefilledDate(undefined);
+    setPrefilledTime(undefined);
+  };
 
   return (
     <div className="min-h-screen bg-neutral dark:bg-slate-900">
@@ -39,6 +55,7 @@ export default function Calendar() {
               currentDate={currentDate}
               view={view}
               searchTerm={searchTerm}
+              onCreateTask={handleCreateTask}
             />
           </div>
           
@@ -59,6 +76,13 @@ export default function Calendar() {
           </div>
         </div>
       </main>
+      
+      <TaskModal 
+        isOpen={isTaskModalOpen} 
+        onClose={handleCloseTaskModal}
+        prefilledDate={prefilledDate}
+        prefilledTime={prefilledTime}
+      />
     </div>
   );
 }

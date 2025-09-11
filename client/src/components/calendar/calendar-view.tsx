@@ -12,12 +12,14 @@ interface CalendarViewProps {
   currentDate: Date;
   view: "month" | "week" | "day";
   searchTerm: string;
+  onCreateTask?: (date: Date, time?: string) => void;
 }
 
 export default function CalendarView({ 
   currentDate, 
   view, 
-  searchTerm 
+  searchTerm,
+  onCreateTask
 }: CalendarViewProps) {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -93,9 +95,14 @@ export default function CalendarView({
       days.push(
         <div 
           key={day} 
-          className={`h-24 md:h-32 border rounded-lg p-2 hover:bg-gray-50 cursor-pointer ${
-            isToday ? 'bg-blue-50 border-primary' : 'border-gray-200'
+          className={`h-24 md:h-32 border rounded-lg p-2 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer ${
+            isToday ? 'bg-blue-50 dark:bg-slate-700 border-primary' : 'border-gray-200 dark:border-slate-700'
           }`}
+          onClick={() => {
+            if (tasksForDay.length === 0 && onCreateTask) {
+              onCreateTask(date);
+            }
+          }}
         >
           <div className={`text-sm font-medium mb-1 ${isToday ? 'text-primary' : ''}`}>
             {day}
@@ -176,9 +183,15 @@ export default function CalendarView({
               return (
                 <div 
                   key={dayIndex} 
-                  className={`flex-1 min-h-[60px] border-r border-gray-100 p-1 relative hover:bg-gray-50 ${
-                    isToday ? 'bg-blue-50' : ''
+                  className={`flex-1 min-h-[60px] border-r border-gray-100 dark:border-slate-700 p-1 relative hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer ${
+                    isToday ? 'bg-blue-50 dark:bg-slate-700' : ''
                   }`}
+                  onClick={() => {
+                    if (onCreateTask) {
+                      const timeString = `${hour.toString().padStart(2, '0')}:00`;
+                      onCreateTask(date, timeString);
+                    }
+                  }}
                 >
                   {tasksForDay
                     .filter(task => {
@@ -252,7 +265,15 @@ export default function CalendarView({
               </div>
               
               {/* Single day column */}
-              <div className="flex-1 min-h-[40px] p-2 relative hover:bg-gray-50">
+              <div 
+                className="flex-1 min-h-[40px] p-2 relative hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer"
+                onClick={() => {
+                  if (onCreateTask) {
+                    const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                    onCreateTask(currentDate, timeString);
+                  }
+                }}
+              >
                 {tasksForDay
                   .filter(task => {
                     const taskDate = new Date(task.startDate);
