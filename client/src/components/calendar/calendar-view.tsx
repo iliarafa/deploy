@@ -350,8 +350,8 @@ export default function CalendarView({
         {view === "week" && (
           <>
             {/* Week Header with Dates */}
-            <div className="flex border-b border-gray-200 mb-2">
-              <div className="w-16 md:w-20 text-xs text-gray-500 p-2 text-right border-r border-gray-100">
+            <div className="flex border-b border-gray-200 dark:border-slate-700 mb-2">
+              <div className="w-16 md:w-20 text-xs text-gray-500 dark:text-slate-400 p-2 text-right border-r border-gray-100 dark:border-slate-700">
                 Time
               </div>
               {getWeekDates(getStartOfWeek(currentDate)).map((date, index) => {
@@ -361,15 +361,15 @@ export default function CalendarView({
                 return (
                   <div 
                     key={index} 
-                    className={`flex-1 text-center p-3 border-r border-gray-100 ${
-                      isToday ? 'bg-blue-50 text-primary font-semibold' : 'text-gray-700'
+                    className={`flex-1 text-center p-3 border-r border-gray-100 dark:border-slate-700 ${
+                      isToday ? 'bg-blue-50 dark:bg-slate-700 text-primary font-semibold' : 'text-gray-700 dark:text-slate-300'
                     }`}
                   >
                     <div className="text-sm font-medium">{dayName}</div>
-                    <div className={`text-lg ${isToday ? 'text-primary' : 'text-gray-900'}`}>
+                    <div className={`text-lg ${isToday ? 'text-primary' : 'text-gray-900 dark:text-white'}`}>
                       {date.getDate()}
                     </div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-500 dark:text-slate-400">
                       {date.toLocaleDateString([], { month: 'short' })}
                     </div>
                   </div>
@@ -387,8 +387,8 @@ export default function CalendarView({
         {view === "day" && (
           <>
             {/* Day Header */}
-            <div className="text-center border-b border-gray-200 pb-4 mb-4">
-              <div className="text-2xl font-bold text-gray-900 mb-1">
+            <div className="text-center border-b border-gray-200 dark:border-slate-700 pb-4 mb-4">
+              <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
                 {currentDate.toLocaleDateString([], { 
                   weekday: 'long', 
                   month: 'long', 
@@ -396,7 +396,7 @@ export default function CalendarView({
                   year: 'numeric' 
                 })}
               </div>
-              <div className="text-sm text-gray-500">
+              <div className="text-sm text-gray-500 dark:text-slate-400">
                 {getTasksForDate(currentDate).length} task{getTasksForDate(currentDate).length !== 1 ? 's' : ''} scheduled
               </div>
             </div>

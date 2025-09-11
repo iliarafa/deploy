@@ -32,7 +32,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
+      <header className="bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
@@ -60,7 +60,7 @@ export default function Header() {
                   <span className={`font-medium pb-2 cursor-pointer ${
                     isActive("/log") 
                       ? "text-primary border-b-2 border-primary" 
-                      : "text-gray-500 hover:text-gray-700"
+                      : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
                   }`}>
                     Log
                   </span>
@@ -72,7 +72,7 @@ export default function Header() {
                   <span className={`font-medium pb-2 cursor-pointer ${
                     isActive("/tasks") 
                       ? "text-primary border-b-2 border-primary" 
-                      : "text-gray-500 hover:text-gray-700"
+                      : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
                   }`}>
                     Tasks
                   </span>
@@ -84,7 +84,7 @@ export default function Header() {
                   <span className={`font-medium pb-2 cursor-pointer ${
                     isActive("/materials") 
                       ? "text-primary border-b-2 border-primary" 
-                      : "text-gray-500 hover:text-gray-700"
+                      : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
                   }`}>
                     Materials
                   </span>
@@ -96,7 +96,7 @@ export default function Header() {
                   <span className={`font-medium pb-2 cursor-pointer ${
                     isActive("/reports") 
                       ? "text-primary border-b-2 border-primary" 
-                      : "text-gray-500 hover:text-gray-700"
+                      : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
                   }`}>
                     Reports
                   </span>
@@ -108,7 +108,7 @@ export default function Header() {
                   <span className={`font-medium pb-2 cursor-pointer flex items-center gap-1 ${
                     isActive("/admin") 
                       ? "text-primary border-b-2 border-primary" 
-                      : "text-gray-500 hover:text-gray-700"
+                      : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
                   }`}>
                     <Shield className="w-4 h-4" />
                     Admin Panel
@@ -148,7 +148,7 @@ export default function Header() {
                         <User className="w-4 h-4 text-primary" />
                       </div>
                       <div className="hidden md:flex flex-col items-center">
-                        <span className="text-sm font-medium text-gray-900">{user.username}</span>
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">{user.username}</span>
                         <Badge variant="outline" className="text-xs">
                           {user.role.replace('_', ' ')}
                         </Badge>

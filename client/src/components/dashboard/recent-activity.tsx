@@ -84,7 +84,7 @@ export default function RecentActivity() {
       <CardContent>
         <div className="space-y-4">
           {activities.length === 0 ? (
-            <div className="text-center py-4 text-gray-500">
+            <div className="text-center py-4 text-gray-500 dark:text-gray-400">
               No recent activity
             </div>
           ) : (
@@ -92,10 +92,10 @@ export default function RecentActivity() {
               <div key={activity.id} className="flex items-start space-x-3">
                 <div className={`w-2 h-2 rounded-full mt-2 ${getActivityColor(activity.status)}`}></div>
                 <div className="flex-1">
-                  <p className="text-sm text-gray-900 line-clamp-2">
+                  <p className="text-sm text-gray-900 dark:text-white line-clamp-2">
                     {getActivityText(activity)}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     {formatDistanceToNow(activity.createdAt)}
                   </p>
                 </div>
