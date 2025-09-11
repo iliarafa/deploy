@@ -316,10 +316,10 @@ export default function CalendarView({
 
   if (isLoading) {
     return (
-      <Card className="mb-6">
+      <Card className="mb-6 dark:bg-slate-800">
         <CardContent className="pt-6">
           <div className="text-center py-8">
-            <div className="text-gray-500">Loading calendar...</div>
+            <div className="text-gray-500 dark:text-gray-300">Loading calendar...</div>
           </div>
         </CardContent>
       </Card>
@@ -327,7 +327,7 @@ export default function CalendarView({
   }
 
   return (
-    <Card className="mb-6">
+    <Card className="mb-6 dark:bg-slate-800">
       <CardContent className="pt-6">
         {view === "month" && (
           <>

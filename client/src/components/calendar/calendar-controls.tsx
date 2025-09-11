@@ -36,7 +36,7 @@ export default function CalendarControls({
   };
 
   return (
-    <Card className="mb-6">
+    <Card className="mb-6 dark:bg-slate-800">
       <CardContent className="pt-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
           <div className="flex items-center space-x-4">
