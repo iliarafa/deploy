@@ -13,6 +13,7 @@ import { z } from "zod";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -94,6 +95,25 @@ export default function TaskModal({ isOpen, onClose, prefilledDate, prefilledTim
       });
     },
   });
+
+  // Reset form when prefilled values change
+  useEffect(() => {
+    if (isOpen) {
+      const defaultStartDate = getDefaultStartDate();
+      form.reset({
+        title: "",
+        description: "",
+        category: "inspection",
+        priority: "standard",
+        status: "pending",
+        location: "",
+        assignedTo: "",
+        startDate: defaultStartDate,
+        endDate: "",
+        multiDay: false,
+      });
+    }
+  }, [isOpen, prefilledDate, prefilledTime, form]);
 
   const onSubmit = (data: TaskFormData) => {
     createTaskMutation.mutate(data);
