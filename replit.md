@@ -1,8 +1,8 @@
-# Deploy - Construction Management Application
+# Deploy - Property Management Application
 
 ## Overview
 
-Deploy is a construction management application built with a modern full-stack architecture. The application provides calendar-based task management, material request tracking, and reporting capabilities for construction teams. It features a responsive React frontend with shadcn/ui components and an Express.js backend with PostgreSQL database integration.
+Deploy is a property management application built with a modern full-stack architecture. The application provides calendar-based task management, material request tracking, and reporting capabilities for property management teams. It features a responsive React frontend with shadcn/ui components and an Express.js backend with PostgreSQL database integration.
 
 ## User Preferences
 

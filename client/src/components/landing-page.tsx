@@ -38,7 +38,7 @@ export default function LandingPage() {
             <Hammer className="text-primary text-4xl" />
             <h1 className="text-4xl font-bold text-gray-900">Deploy</h1>
           </div>
-          <p className="text-gray-600">Construction Management System</p>
+          <p className="text-gray-600">Property Management System</p>
         </div>
 
         {/* Login Card */}
