@@ -32,21 +32,21 @@
 }
 
 .dark {
-  --background: hsl(240, 10%, 3.9%);
+  --background: hsl(215, 28%, 17%);
   --foreground: hsl(0, 0%, 98%);
-  --muted: hsl(240, 3.7%, 15.9%);
+  --muted: hsl(215, 20%, 25%);
   --muted-foreground: hsl(240, 5%, 64.9%);
-  --popover: hsl(240, 10%, 3.9%);
+  --popover: hsl(215, 28%, 17%);
   --popover-foreground: hsl(0, 0%, 98%);
-  --card: hsl(240, 10%, 3.9%);
+  --card: hsl(215, 25%, 20%);
   --card-foreground: hsl(0, 0%, 98%);
-  --border: hsl(240, 3.7%, 15.9%);
-  --input: hsl(240, 3.7%, 15.9%);
+  --border: hsl(215, 20%, 25%);
+  --input: hsl(215, 20%, 25%);
   --primary: hsl(207, 90%, 54%);
   --primary-foreground: hsl(211, 100%, 99%);
   --secondary: hsl(25, 95%, 58%);
   --secondary-foreground: hsl(0, 0%, 100%);
-  --accent: hsl(240, 3.7%, 15.9%);
+  --accent: hsl(215, 20%, 25%);
   --accent-foreground: hsl(0, 0%, 98%);
   --destructive: hsl(14, 90%, 54%);
   --destructive-foreground: hsl(0, 0%, 100%);
@@ -54,7 +54,7 @@
   --success-foreground: hsl(0, 0%, 100%);
   --warning: hsl(45, 93%, 47%);
   --warning-foreground: hsl(0, 0%, 100%);
-  --neutral: hsl(240, 3.7%, 15.9%);
+  --neutral: hsl(215, 20%, 25%);
   --dark: hsl(0, 0%, 26.3%);
   --ring: hsl(240, 4.9%, 83.9%);
   --radius: 0.5rem;
