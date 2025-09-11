@@ -17,6 +17,8 @@ import { useToast } from "@/hooks/use-toast";
 interface TaskModalProps {
   isOpen: boolean;
   onClose: () => void;
+  prefilledDate?: Date;
+  prefilledTime?: string;
 }
 
 const taskFormSchema = insertTaskSchema.extend({
@@ -27,7 +29,7 @@ const taskFormSchema = insertTaskSchema.extend({
 
 type TaskFormData = z.infer<typeof taskFormSchema>;
 
-export default function TaskModal({ isOpen, onClose }: TaskModalProps) {
+export default function TaskModal({ isOpen, onClose, prefilledDate, prefilledTime }: TaskModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -36,6 +38,19 @@ export default function TaskModal({ isOpen, onClose }: TaskModalProps) {
     queryKey: ["/api/users"],
     enabled: isOpen,
   });
+
+  // Calculate default start date and time
+  const getDefaultStartDate = () => {
+    if (prefilledDate) {
+      const date = new Date(prefilledDate);
+      if (prefilledTime) {
+        const [hours, minutes] = prefilledTime.split(':').map(Number);
+        date.setHours(hours, minutes, 0, 0);
+      }
+      return date.toISOString().slice(0, 16); // Format for datetime-local input
+    }
+    return "";
+  };
 
   const form = useForm<TaskFormData>({
     resolver: zodResolver(taskFormSchema),
@@ -47,7 +62,7 @@ export default function TaskModal({ isOpen, onClose }: TaskModalProps) {
       status: "pending",
       location: "",
       assignedTo: "",
-      startDate: "",
+      startDate: getDefaultStartDate(),
       endDate: "",
       multiDay: false,
     },
