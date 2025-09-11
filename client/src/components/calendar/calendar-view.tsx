@@ -98,8 +98,9 @@ export default function CalendarView({
           className={`h-24 md:h-32 border rounded-lg p-2 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer ${
             isToday ? 'bg-blue-50 dark:bg-slate-700 border-primary' : 'border-gray-200 dark:border-slate-700'
           }`}
-          onClick={() => {
-            if (tasksForDay.length === 0 && onCreateTask) {
+          onClick={(e) => {
+            // Only create task if clicking on empty space (not on existing tasks)
+            if (onCreateTask && e.target === e.currentTarget) {
               onCreateTask(date);
             }
           }}
