@@ -47,7 +47,7 @@ export async function sendTaskNotification(assignedToEmail: string, taskTitle: s
   
   return sendEmail({
     to: assignedToEmail,
-    from: 'noreply@deploy.app', // You'll need to verify this sender in SendGrid
+    from: process.env.FROM_EMAIL || 'ilias@csrllc.net',
     subject: `New Task: ${taskTitle}`,
     html,
     text: `New Task Assigned: ${taskTitle}. Created by: ${creator}. Check the Deploy app for details.`
@@ -65,7 +65,7 @@ export async function sendMaterialRequestNotification(emails: string[], material
   
   const promises = emails.map(email => sendEmail({
     to: email,
-    from: 'noreply@deploy.app',
+    from: process.env.FROM_EMAIL || 'ilias@csrllc.net',
     subject: `Material Request: ${materialType}`,
     html,
     text: `New Material Request: ${materialType}. Requested by: ${creator}. Check the Deploy app for details.`
