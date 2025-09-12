@@ -806,36 +806,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Test email endpoint for notification testing
-  app.post("/api/test-email", authenticate, enforcePasswordChange, async (req, res) => {
-    try {
-      const { email } = req.body;
-      if (!email) {
-        return res.status(400).json({ message: "Email is required" });
-      }
-
-      const success = await sendEmail({
-        to: email,
-        from: 'noreply@deploy.app',
-        subject: 'Deploy Notification Test',
-        html: `
-          <h2>Notification Test</h2>
-          <p>This is a test email from your Deploy property management system.</p>
-          <p>If you received this email, your notification system is working correctly!</p>
-        `,
-        text: 'This is a test email from your Deploy property management system. If you received this email, your notification system is working correctly!'
-      });
-
-      if (success) {
-        res.json({ message: "Test email sent successfully" });
-      } else {
-        res.status(500).json({ message: "Failed to send test email" });
-      }
-    } catch (error) {
-      console.error("Test email error:", error);
-      res.status(500).json({ message: "Failed to send test email" });
-    }
-  });
 
   const httpServer = createServer(app);
   return httpServer;

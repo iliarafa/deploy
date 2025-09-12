@@ -7,7 +7,6 @@ import QuickActions from "@/components/dashboard/quick-actions";
 import TaskCategories from "@/components/dashboard/task-categories";
 import RecentActivity from "@/components/dashboard/recent-activity";
 import NotificationSetup from "@/components/notifications/notification-setup";
-import NotificationTest from "@/components/notifications/notification-test";
 import PasswordChangeReminder from "@/components/notifications/password-change-reminder";
 import { useState } from "react";
 import TaskModal from "@/components/tasks/task-modal";
@@ -72,7 +71,6 @@ export default function Calendar() {
           
           <div className="space-y-6">
             <NotificationSetup />
-            <NotificationTest />
             <TaskCategories />
             <RecentActivity />
           </div>
