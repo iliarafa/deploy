@@ -41,6 +41,7 @@ import { type UserRole } from "@shared/roles";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
+
   // Authentication routes
   app.post("/api/auth/login", async (req, res) => {
     try {
@@ -806,6 +807,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test email endpoint for debugging/verification
+  app.post("/api/test-email", async (req, res) => {
+    try {
+      const { to } = req.body;
+      
+      if (!to) {
+        return res.status(400).json({ message: "Email address is required" });
+      }
+
+      const success = await sendEmail({
+        to: to,
+        from: process.env.FROM_EMAIL || 'ilias@csrllc.net',
+        subject: "Test Email from Deploy Property Management",
+        html: `
+          <h2>Test Email</h2>
+          <p>This is a test email from your Deploy Property Management system.</p>
+          <p>If you received this email, your email notifications are working correctly!</p>
+          <p>Time sent: ${new Date().toLocaleString()}</p>
+        `,
+        text: `Test Email - This is a test email from your Deploy Property Management system. If you received this email, your email notifications are working correctly! Time sent: ${new Date().toLocaleString()}`
+      });
+
+      if (success) {
+        res.json({ message: "Test email sent successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to send test email" });
+      }
+    } catch (error) {
+      console.error("Test email error:", error);
+      res.status(500).json({ message: "Failed to send test email" });
+    }
+  });
+
+  // Catch-all for unknown API routes - return 404 JSON instead of HTML
+  app.all('/api/*', (req, res) => {
+    res.status(404).json({ message: 'API endpoint not found' });
+  });
 
   const httpServer = createServer(app);
   return httpServer;
