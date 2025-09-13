@@ -11,7 +11,7 @@ interface AuthenticatedWebSocket extends WebSocket {
 }
 
 interface WebSocketMessage {
-  type: 'task_created' | 'material_request_created' | 'task_updated' | 'ping' | 'registration_request' | 'registration_reviewed' | 'user_created' | 'vacancy_created' | 'colab_message' | 'colab_message_deleted';
+  type: 'task_created' | 'material_request_created' | 'task_updated' | 'ping' | 'registration_request' | 'registration_reviewed' | 'user_created' | 'vacancy_created' | 'colab_message' | 'colab_message_deleted' | 'task_status_change';
   data?: any;
   request?: any;
   user?: any;

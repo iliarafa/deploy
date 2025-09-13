@@ -29,7 +29,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { wsManager } from "./websocket";
-import { sendTaskNotification, sendMaterialRequestNotification, sendEmail } from "./email";
+import { sendTaskNotification, sendMaterialRequestNotification, sendEmail, sendTaskStatusChangeNotification } from "./email";
 import { 
   authenticate, 
   requirePermission, 
@@ -581,7 +581,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const validatedData = insertTaskSchema.partial().parse(req.body);
+      
+      // Get original task to check for status changes
+      const originalTask = await storage.getTask(id);
+      if (!originalTask) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
       const task = await storage.updateTask(id, validatedData);
+      
+      // Check if status changed to "in-progress" by a worker
+      if (
+        validatedData.status && 
+        validatedData.status === "in-progress" && 
+        originalTask.status !== "in-progress" &&
+        req.user?.role === "worker"
+      ) {
+        try {
+          // Get the current user's details for notification
+          const currentUser = await storage.getUser(req.user.id);
+          const workerName = currentUser?.username || currentUser?.firstName || 'Unknown Worker';
+          
+          // Get admin and project manager users for notifications
+          const notificationUsers = await storage.getUsersByRole(['admin', 'project_manager']);
+          const notificationEmails = notificationUsers
+            .filter(user => user.email) // Only users with email addresses
+            .map(user => user.email!); // Non-null assertion since we filtered
+          
+          if (notificationEmails.length > 0) {
+            // Send email notifications
+            await sendTaskStatusChangeNotification(
+              notificationEmails,
+              task.title,
+              task.id,
+              "in-progress",
+              workerName
+            );
+            
+            // Send WebSocket notification for real-time updates
+            wsManager.broadcast({
+              type: 'task_status_change',
+              data: {
+                taskId: task.id,
+                taskTitle: task.title,
+                newStatus: "in-progress",
+                workerName: workerName,
+                oldStatus: originalTask.status
+              }
+            });
+          }
+        } catch (notificationError) {
+          // Log notification error but don't fail the task update
+          console.error('Failed to send task status notification:', notificationError);
+        }
+      }
+      
       res.json(task);
     } catch (error) {
       if (error instanceof z.ZodError) {
