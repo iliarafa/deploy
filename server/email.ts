@@ -74,3 +74,26 @@ export async function sendMaterialRequestNotification(emails: string[], material
   const results = await Promise.all(promises);
   return results.every(result => result);
 }
+
+export async function sendTaskStatusChangeNotification(emails: string[], taskTitle: string, taskId: number, newStatus: string, workerName: string) {
+  const html = `
+    <h2>Task Status Update</h2>
+    <p>A task has been updated to <strong>"${newStatus}"</strong> status:</p>
+    <h3>${taskTitle}</h3>
+    <p><strong>Task ID:</strong> #${taskId}</p>
+    <p><strong>Updated by:</strong> ${workerName}</p>
+    <p><strong>New Status:</strong> ${newStatus}</p>
+    <p>Please check the Deploy app for full details and to monitor progress.</p>
+  `;
+  
+  const promises = emails.map(email => sendEmail({
+    to: email,
+    from: process.env.FROM_EMAIL || 'ilias@csrllc.net',
+    subject: `Task Status Update: ${taskTitle} is now ${newStatus}`,
+    html,
+    text: `Task Status Update: ${taskTitle} (ID: #${taskId}) has been updated to "${newStatus}" by ${workerName}. Check the Deploy app for details.`
+  }));
+  
+  const results = await Promise.all(promises);
+  return results.every(result => result);
+}
