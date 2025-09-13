@@ -85,9 +85,9 @@ export interface IStorage {
   // Material request operations with role-based filtering
   getMaterialRequests(userId?: number, userRole?: UserRole): Promise<MaterialRequest[]>;
   getMaterialRequest(id: number): Promise<MaterialRequest | undefined>;
-  createMaterialRequest(request: InsertMaterialRequest): Promise<MaterialRequest>;
+  createMaterialRequest(request: InsertMaterialRequest, userId: number): Promise<MaterialRequest>;
   updateMaterialRequest(id: number, updates: Partial<InsertMaterialRequest>): Promise<MaterialRequest>;
-  deleteMaterialRequest(id: number): Promise<void>;
+  deleteMaterialRequest(id: number, userId: number, userRole: UserRole): Promise<void>;
   
   // Communication operations
   getCommunications(): Promise<Communication[]>;
@@ -448,8 +448,12 @@ export class MemStorage implements IStorage {
       return allRequests;
     }
 
-    // For now, all roles can see all material requests
-    // In a full implementation, you'd track who created the request
+    // Workers can only see their own material requests
+    if (userRole === 'worker' && userId) {
+      return allRequests.filter(request => request.userId === userId);
+    }
+    
+    // Admin, project_manager, supervisor, inspector, client can see all requests
     return allRequests;
   }
 
@@ -457,10 +461,11 @@ export class MemStorage implements IStorage {
     return this.materialRequests.get(id);
   }
 
-  async createMaterialRequest(insertRequest: InsertMaterialRequest): Promise<MaterialRequest> {
+  async createMaterialRequest(insertRequest: InsertMaterialRequest, userId: number): Promise<MaterialRequest> {
     const id = this.currentMaterialRequestId++;
     const request: MaterialRequest = { 
-      ...insertRequest, 
+      ...insertRequest,
+      userId, // Auto-assign from authenticated session
       id, 
       createdAt: new Date(),
       notes: insertRequest.notes || null,
@@ -481,8 +486,26 @@ export class MemStorage implements IStorage {
     return updated;
   }
 
-  async deleteMaterialRequest(id: number): Promise<void> {
-    this.materialRequests.delete(id);
+  async deleteMaterialRequest(id: number, userId: number, userRole: UserRole): Promise<void> {
+    const request = this.materialRequests.get(id);
+    if (!request) {
+      throw new Error(`Material request with id ${id} not found`);
+    }
+    
+    // Admin and project managers can delete any request
+    if (userRole === 'admin' || userRole === 'project_manager') {
+      this.materialRequests.delete(id);
+      return;
+    }
+    
+    // Workers can only delete their own requests
+    if (userRole === 'worker' && request.userId === userId) {
+      this.materialRequests.delete(id);
+      return;
+    }
+    
+    // Other roles (supervisor, inspector, client) cannot delete requests
+    throw new Error('Access denied. You do not have permission to delete this material request.');
   }
 
   async getCommunications(): Promise<Communication[]> {
@@ -875,13 +898,10 @@ export class DatabaseStorage implements IStorage {
 
     // Workers can only see their own material requests
     if (userRole === 'worker' && userId) {
-      // For now, we'll show all since we don't track who created the request
-      // In a full implementation, you'd add a createdBy field
-      return await db.select().from(materialRequests);
+      return await db.select().from(materialRequests).where(eq(materialRequests.userId, userId));
     }
 
-    // Admin, project_manager, supervisor can see all material requests
-    // Clients get read-only view of all requests
+    // Admin, project_manager, supervisor, inspector, client can see all material requests
     return await db.select().from(materialRequests);
   }
 
@@ -890,10 +910,10 @@ export class DatabaseStorage implements IStorage {
     return request || undefined;
   }
 
-  async createMaterialRequest(insertRequest: InsertMaterialRequest): Promise<MaterialRequest> {
+  async createMaterialRequest(insertRequest: InsertMaterialRequest, userId: number): Promise<MaterialRequest> {
     const [request] = await db
       .insert(materialRequests)
-      .values(insertRequest)
+      .values({ ...insertRequest, userId })
       .returning();
     return request;
   }
@@ -910,8 +930,27 @@ export class DatabaseStorage implements IStorage {
     return request;
   }
 
-  async deleteMaterialRequest(id: number): Promise<void> {
-    await db.delete(materialRequests).where(eq(materialRequests.id, id));
+  async deleteMaterialRequest(id: number, userId: number, userRole: UserRole): Promise<void> {
+    // First, get the request to check ownership
+    const [request] = await db.select().from(materialRequests).where(eq(materialRequests.id, id));
+    if (!request) {
+      throw new Error(`Material request with id ${id} not found`);
+    }
+    
+    // Admin and project managers can delete any request
+    if (userRole === 'admin' || userRole === 'project_manager') {
+      await db.delete(materialRequests).where(eq(materialRequests.id, id));
+      return;
+    }
+    
+    // Workers can only delete their own requests
+    if (userRole === 'worker' && request.userId === userId) {
+      await db.delete(materialRequests).where(eq(materialRequests.id, id));
+      return;
+    }
+    
+    // Other roles (supervisor, inspector, client) cannot delete requests
+    throw new Error('Access denied. You do not have permission to delete this material request.');
   }
 
   async getCommunications(): Promise<Communication[]> {

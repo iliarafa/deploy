@@ -607,8 +607,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Material request routes with authorization
   app.get("/api/material-requests", authenticate, enforcePasswordChange, canAccessResource('material'), addUserContext, async (req, res) => {
     try {
-      const userId = parseInt(req.query.userId as string);
-      const userRole = req.query.userRole as UserRole;
+      // Use authenticated user's context for security, not query parameters
+      const userId = req.user?.id;
+      const userRole = req.user?.role as UserRole;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
       const requests = await storage.getMaterialRequests(userId, userRole);
       res.json(requests);
     } catch (error) {
@@ -619,11 +625,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/material-requests/:id", authenticate, enforcePasswordChange, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      const userId = req.user?.id;
+      const userRole = req.user?.role as UserRole;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
       const request = await storage.getMaterialRequest(id);
       if (!request) {
         return res.status(404).json({ message: "Material request not found" });
       }
-      res.json(request);
+      
+      // Admin and project managers can access any request
+      if (userRole === 'admin' || userRole === 'project_manager') {
+        return res.json(request);
+      }
+      
+      // Workers can only access their own requests
+      if (userRole === 'worker' && request.userId === userId) {
+        return res.json(request);
+      }
+      
+      // Other roles or unauthorized access
+      return res.status(403).json({ message: "Access denied. You can only view your own material requests." });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch material request" });
     }
@@ -631,14 +656,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/material-requests", authenticate, enforcePasswordChange, async (req, res) => {
     try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
       // Convert deliveryDate from string to Date object if needed
       const requestData = {
         ...req.body,
         deliveryDate: new Date(req.body.deliveryDate)
       };
       
+      // Remove userId from request body to prevent client-side manipulation (security)
+      delete requestData.userId;
+      
       const validatedData = insertMaterialRequestSchema.parse(requestData);
-      const request = await storage.createMaterialRequest(validatedData);
+      const request = await storage.createMaterialRequest(validatedData, userId);
       
       // Send real-time notification
       wsManager.notifyMaterialRequestCreated(request);
@@ -683,9 +716,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/material-requests/:id", authenticate, enforcePasswordChange, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      await storage.deleteMaterialRequest(id);
+      const userId = req.user?.id;
+      const user = req.user;
+      
+      if (!userId || !user) {
+        return res.status(401).json({ message: "User authentication required" });
+      }
+      
+      await storage.deleteMaterialRequest(id, userId, user.role as UserRole);
       res.status(204).send();
     } catch (error) {
+      if (error instanceof Error && error.message.includes("Access denied")) {
+        return res.status(403).json({ message: error.message });
+      }
+      if (error instanceof Error && error.message.includes("not found")) {
+        return res.status(404).json({ message: "Material request not found" });
+      }
       res.status(500).json({ message: "Failed to delete material request" });
     }
   });
