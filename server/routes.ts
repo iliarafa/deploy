@@ -24,7 +24,8 @@ import {
   reviewRegistrationRequestSchema,
   updateUserSchema,
   insertUserSchema,
-  changePasswordSchema
+  changePasswordSchema,
+  insertColabMessageSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { wsManager } from "./websocket";
@@ -719,6 +720,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid communication data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to create communication" });
+    }
+  });
+
+  // Colab message routes
+  app.get("/api/colab-messages", authenticate, enforcePasswordChange, async (req, res) => {
+    try {
+      const messages = await storage.getColabMessages();
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching colab messages:", error);
+      res.status(500).json({ message: "Failed to fetch colab messages" });
+    }
+  });
+
+  app.get("/api/colab-messages/search", authenticate, enforcePasswordChange, async (req, res) => {
+    try {
+      const query = req.query.q as string || "";
+      const messages = await storage.searchColabMessages(query);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error searching colab messages:", error);
+      res.status(500).json({ message: "Failed to search colab messages" });
+    }
+  });
+
+  app.get("/api/colab-messages/:id", authenticate, enforcePasswordChange, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const message = await storage.getColabMessage(id);
+      if (!message) {
+        return res.status(404).json({ message: "Message not found" });
+      }
+      res.json(message);
+    } catch (error) {
+      console.error("Error fetching colab message:", error);
+      res.status(500).json({ message: "Failed to fetch colab message" });
+    }
+  });
+
+  app.post("/api/colab-messages", authenticate, enforcePasswordChange, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      // Get user info to derive username server-side (security requirement)
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Parse and validate only the content field from client
+      const { content } = insertColabMessageSchema.omit({ 
+        userId: true, 
+        username: true 
+      }).parse(req.body);
+      
+      // Server-side derived data for security
+      const messageData = {
+        userId: user.id,
+        username: user.username,
+        content: content
+      };
+
+      const message = await storage.createColabMessage(messageData);
+      
+      // Broadcast to WebSocket clients for real-time updates
+      wsManager.broadcast({
+        type: 'colab_message',
+        data: message
+      });
+      
+      res.status(201).json(message);
+    } catch (error) {
+      console.error("Error creating colab message:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid message data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create colab message" });
     }
   });
 
