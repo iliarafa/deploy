@@ -95,10 +95,7 @@ export default function Colab() {
   // Create message mutation
   const createMessageMutation = useMutation({
     mutationFn: async (content: string) => {
-      return apiRequest("/api/colab-messages", {
-        method: "POST",
-        body: { content },
-      });
+      return apiRequest("POST", "/api/colab-messages", { content });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/colab-messages"] });
