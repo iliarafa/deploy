@@ -105,6 +105,7 @@ export interface IStorage {
   getColabMessages(): Promise<ColabMessage[]>;
   getColabMessage(id: number): Promise<ColabMessage | undefined>;
   createColabMessage(message: InsertColabMessage): Promise<ColabMessage>;
+  deleteColabMessage(id: number, userId: number, userRole: UserRole): Promise<void>;
   searchColabMessages(query: string): Promise<ColabMessage[]>;
   
   // Role-based authorization helpers
@@ -599,6 +600,20 @@ export class MemStorage implements IStorage {
     return message;
   }
 
+  async deleteColabMessage(id: number, userId: number, userRole: UserRole): Promise<void> {
+    const message = this.colabMessages.get(id);
+    if (!message) {
+      throw new Error(`Message with id ${id} not found`);
+    }
+    
+    // Authorization check: users can delete their own messages, admin/project_manager can delete any
+    if (message.userId !== userId && userRole !== 'admin' && userRole !== 'project_manager') {
+      throw new Error('Not authorized to delete this message');
+    }
+    
+    this.colabMessages.delete(id);
+  }
+
   async searchColabMessages(query: string): Promise<ColabMessage[]> {
     const allMessages = await this.getColabMessages();
     if (!query.trim()) {
@@ -1025,6 +1040,21 @@ export class DatabaseStorage implements IStorage {
       .values(insertMessage)
       .returning();
     return message;
+  }
+
+  async deleteColabMessage(id: number, userId: number, userRole: UserRole): Promise<void> {
+    // First check if message exists and get ownership info
+    const [message] = await db.select().from(colabMessages).where(eq(colabMessages.id, id));
+    if (!message) {
+      throw new Error(`Message with id ${id} not found`);
+    }
+    
+    // Authorization check: users can delete their own messages, admin/project_manager can delete any
+    if (message.userId !== userId && userRole !== 'admin' && userRole !== 'project_manager') {
+      throw new Error('Not authorized to delete this message');
+    }
+    
+    await db.delete(colabMessages).where(eq(colabMessages.id, id));
   }
 
   async searchColabMessages(query: string): Promise<ColabMessage[]> {

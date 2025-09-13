@@ -268,7 +268,7 @@ export default function Colab() {
                         <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
                           <Clock className="w-3 h-3" />
                           <span data-testid={`text-timestamp-${message.id}`}>
-                            {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
+                            {formatDistanceToNow(new Date(message.createdAt || Date.now()), { addSuffix: true })}
                           </span>
                         </div>
                       </div>
