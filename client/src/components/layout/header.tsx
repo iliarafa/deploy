@@ -43,21 +43,21 @@ export default function Header() {
             </div>
             
             {/* Role-based Navigation */}
-            <nav className="hidden md:flex space-x-8">
+            <nav className="hidden md:flex space-x-4">
               <Link href="/">
-                <span className={`font-medium pb-2 cursor-pointer ${
+                <span className={`text-sm pb-2 cursor-pointer ${
                   isActive("/") 
                     ? "text-primary border-b-2 border-primary" 
                     : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
                 }`}>
-                  Calendar
+                  Cal
                 </span>
               </Link>
               
               {/* Log tab for workers only */}
               {user && user.role === 'worker' && (
                 <Link href="/log">
-                  <span className={`font-medium pb-2 cursor-pointer ${
+                  <span className={`text-sm pb-2 cursor-pointer ${
                     isActive("/log") 
                       ? "text-primary border-b-2 border-primary" 
                       : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
@@ -71,7 +71,7 @@ export default function Header() {
               {user && (user.role === 'worker' || user.role === 'project_manager' || user.role === 'admin') && (
                 <Link href="/colab">
                   <span 
-                    className={`font-medium pb-2 cursor-pointer ${
+                    className={`text-sm pb-2 cursor-pointer ${
                       isActive("/colab") 
                         ? "text-primary border-b-2 border-primary" 
                         : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
@@ -85,7 +85,7 @@ export default function Header() {
               
               {hasFullNavAccess && hasPermission('view_all_tasks') && (
                 <Link href="/tasks">
-                  <span className={`font-medium pb-2 cursor-pointer ${
+                  <span className={`text-sm pb-2 cursor-pointer ${
                     isActive("/tasks") 
                       ? "text-primary border-b-2 border-primary" 
                       : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
@@ -97,19 +97,19 @@ export default function Header() {
               
               {hasFullNavAccess && hasPermission('view_all_materials') && (
                 <Link href="/materials">
-                  <span className={`font-medium pb-2 cursor-pointer ${
+                  <span className={`text-sm pb-2 cursor-pointer ${
                     isActive("/materials") 
                       ? "text-primary border-b-2 border-primary" 
                       : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
                   }`}>
-                    Materials
+                    Mats
                   </span>
                 </Link>
               )}
               
               {hasFullNavAccess && hasPermission('view_reports') && (
                 <Link href="/reports">
-                  <span className={`font-medium pb-2 cursor-pointer ${
+                  <span className={`text-sm pb-2 cursor-pointer ${
                     isActive("/reports") 
                       ? "text-primary border-b-2 border-primary" 
                       : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
@@ -121,7 +121,7 @@ export default function Header() {
               
               {hasFullNavAccess && (
                 <Link href="/admin">
-                  <span className={`font-medium pb-2 cursor-pointer ${
+                  <span className={`text-sm pb-2 cursor-pointer ${
                     isActive("/admin") 
                       ? "text-primary border-b-2 border-primary" 
                       : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
@@ -132,16 +132,18 @@ export default function Header() {
               )}
             </nav>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
               {/* Role-based Action Buttons */}
               {user && (
                 <Button 
+                  size="sm"
                   className="bg-primary text-white hover:bg-blue-700"
                   onClick={() => setIsTaskModalOpen(true)}
                   data-testid="button-new-task"
                 >
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Task
+                  <Plus className="w-3 h-3 mr-1" />
+                  <span className="hidden sm:inline">New Task</span>
+                  <span className="sm:hidden">Task</span>
                 </Button>
               )}
               
@@ -162,9 +164,9 @@ export default function Header() {
                       <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
                         <User className="w-4 h-4 text-primary" />
                       </div>
-                      <div className="hidden md:flex flex-col items-center">
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">{user.username}</span>
-                        <Badge variant="outline" className="text-xs">
+                      <div className="hidden md:flex flex-col items-start">
+                        <span className="text-xs font-medium text-gray-900 dark:text-white">{user.username}</span>
+                        <Badge variant="outline" className="text-xs px-1">
                           {user.role.replace('_', ' ')}
                         </Badge>
                       </div>
