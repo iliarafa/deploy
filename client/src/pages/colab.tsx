@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Search, Send, MessageSquare, Users, Clock } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Search, Send, MessageSquare, Users, Clock, Trash2 } from "lucide-react";
 import TextHighlighter from "@/components/search/text-highlighter";
 import { filterMessages, countSearchMatches } from "@/components/search/search-utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -72,6 +73,14 @@ export default function Colab() {
             });
           }
         }
+
+        if (message.type === 'colab_message_deleted' && message.data) {
+          // Remove deleted message from cache in real-time
+          queryClient.setQueryData<ColabMessage[]>(["/api/colab-messages"], (oldData) => {
+            if (!oldData) return [];
+            return oldData.filter(msg => msg.id !== message.data.messageId);
+          });
+        }
       } catch (error) {
         console.error('Error parsing WebSocket message:', error);
       }
@@ -113,6 +122,34 @@ export default function Colab() {
       });
     },
   });
+
+  // Delete message mutation
+  const deleteMessageMutation = useMutation({
+    mutationFn: async (messageId: number) => {
+      return apiRequest("DELETE", `/api/colab-messages/${messageId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/colab-messages"] });
+      toast({
+        title: "Message deleted",
+        description: "The message has been removed from the discussion.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete message. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Check if current user can delete a message
+  const canDeleteMessage = (message: ColabMessage) => {
+    if (!user) return false;
+    // Users can delete their own messages, admin/project_manager can delete any
+    return message.userId === user.id || user.role === 'admin' || user.role === 'project_manager';
+  };
 
   // Filter messages based on search
   const filteredMessages = searchTerm.trim() 
@@ -258,19 +295,54 @@ export default function Colab() {
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <TextHighlighter
-                          text={message.username}
-                          searchTerm={searchTerm}
-                          className="font-medium text-gray-900 dark:text-white"
-                          data-testid={`text-username-${message.id}`}
-                        />
-                        <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
-                          <Clock className="w-3 h-3" />
-                          <span data-testid={`text-timestamp-${message.id}`}>
-                            {formatDistanceToNow(new Date(message.createdAt || Date.now()), { addSuffix: true })}
-                          </span>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center space-x-2">
+                          <TextHighlighter
+                            text={message.username}
+                            searchTerm={searchTerm}
+                            className="font-medium text-gray-900 dark:text-white"
+                            data-testid={`text-username-${message.id}`}
+                          />
+                          <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
+                            <Clock className="w-3 h-3" />
+                            <span data-testid={`text-timestamp-${message.id}`}>
+                              {formatDistanceToNow(new Date(message.createdAt || Date.now()), { addSuffix: true })}
+                            </span>
+                          </div>
                         </div>
+                        {canDeleteMessage(message) && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                                data-testid={`button-delete-message-${message.id}`}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Message</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete this message? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteMessageMutation.mutate(message.id)}
+                                  disabled={deleteMessageMutation.isPending}
+                                  className="bg-red-600 hover:bg-red-700"
+                                  data-testid={`button-confirm-delete-${message.id}`}
+                                >
+                                  {deleteMessageMutation.isPending ? "Deleting..." : "Delete"}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       </div>
                       <div className="text-gray-700 dark:text-gray-300">
                         <TextHighlighter
