@@ -67,6 +67,22 @@ export default function Header() {
                 </Link>
               )}
               
+              {/* Colab tab for workers and managers */}
+              {user && (user.role === 'worker' || user.role === 'project_manager' || user.role === 'admin') && (
+                <Link href="/colab">
+                  <span 
+                    className={`font-medium pb-2 cursor-pointer ${
+                      isActive("/colab") 
+                        ? "text-primary border-b-2 border-primary" 
+                        : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
+                    }`}
+                    data-testid="nav-colab"
+                  >
+                    Colab
+                  </span>
+                </Link>
+              )}
+              
               {hasFullNavAccess && hasPermission('view_all_tasks') && (
                 <Link href="/tasks">
                   <span className={`font-medium pb-2 cursor-pointer ${
