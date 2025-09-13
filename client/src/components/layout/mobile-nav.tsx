@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Calendar, CheckSquare, Package, BarChart3, Shield, FileText } from "lucide-react";
+import { Calendar, CheckSquare, Package, BarChart3, Shield, FileText, MessageSquare } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 
 export default function MobileNav() {
@@ -34,6 +34,20 @@ export default function MobileNav() {
             }`}>
               <FileText className="w-5 h-5" />
               <span className="text-xs mt-1">Log</span>
+            </a>
+          </Link>
+        )}
+        {/* Colab tab for workers and managers */}
+        {user && (user.role === 'worker' || user.role === 'project_manager' || user.role === 'admin') && (
+          <Link href="/colab">
+            <a 
+              className={`flex flex-col items-center py-2 px-4 ${
+                isActive("/colab") ? "text-primary" : "text-gray-500"
+              }`}
+              data-testid="nav-colab"
+            >
+              <MessageSquare className="w-5 h-5" />
+              <span className="text-xs mt-1">Colab</span>
             </a>
           </Link>
         )}
