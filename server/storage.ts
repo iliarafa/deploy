@@ -6,6 +6,7 @@ import {
   materialRequests, 
   communications,
   vacancies,
+  colabMessages,
   type User, 
   type InsertUser,
   type UpdateUser,
@@ -21,11 +22,13 @@ import {
   type Communication,
   type InsertCommunication,
   type Vacancy,
-  type InsertVacancy
+  type InsertVacancy,
+  type ColabMessage,
+  type InsertColabMessage
 } from "@shared/schema";
 import { type UserRole, type Permission, hasPermission, getUserPermissions } from "@shared/roles";
 import { db } from "./db";
-import { eq, and, gte, lte, lt } from "drizzle-orm";
+import { eq, and, gte, lte, lt, or, ilike } from "drizzle-orm";
 import { randomBytes, createHash, pbkdf2Sync } from "crypto";
 
 // Utility functions for password hashing and session management
@@ -98,6 +101,12 @@ export interface IStorage {
   updateVacancy(id: number, updates: Partial<InsertVacancy>): Promise<Vacancy>;
   deleteVacancy(id: number): Promise<void>;
   
+  // Colab message operations
+  getColabMessages(): Promise<ColabMessage[]>;
+  getColabMessage(id: number): Promise<ColabMessage | undefined>;
+  createColabMessage(message: InsertColabMessage): Promise<ColabMessage>;
+  searchColabMessages(query: string): Promise<ColabMessage[]>;
+  
   // Role-based authorization helpers
   checkUserPermission(userId: number, permission: Permission): Promise<boolean>;
 }
@@ -110,12 +119,14 @@ export class MemStorage implements IStorage {
   private materialRequests: Map<number, MaterialRequest>;
   private communications: Map<number, Communication>;
   private vacancies: Map<number, Vacancy>;
+  private colabMessages: Map<number, ColabMessage>;
   private currentUserId: number;
   private currentRequestId: number;
   private currentTaskId: number;
   private currentMaterialRequestId: number;
   private currentCommunicationId: number;
   private currentVacancyId: number;
+  private currentColabMessageId: number;
 
   constructor() {
     this.users = new Map();
@@ -125,12 +136,14 @@ export class MemStorage implements IStorage {
     this.materialRequests = new Map();
     this.communications = new Map();
     this.vacancies = new Map();
+    this.colabMessages = new Map();
     this.currentUserId = 1;
     this.currentRequestId = 1;
     this.currentTaskId = 1;
     this.currentMaterialRequestId = 1;
     this.currentCommunicationId = 1;
     this.currentVacancyId = 1;
+    this.currentColabMessageId = 1;
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -157,6 +170,8 @@ export class MemStorage implements IStorage {
       ...insertUser,
       id,
       password: hashedPassword,
+      phone: null,
+      birthDate: null,
       firstName: insertUser.firstName || null,
       lastName: insertUser.lastName || null,
       role: insertUser.role || "worker",
@@ -538,6 +553,41 @@ export class MemStorage implements IStorage {
   async deleteVacancy(id: number): Promise<void> {
     this.vacancies.delete(id);
   }
+
+  // Colab message operations
+  async getColabMessages(): Promise<ColabMessage[]> {
+    return Array.from(this.colabMessages.values()).sort((a, b) => 
+      (a.createdAt || new Date()).getTime() - (b.createdAt || new Date()).getTime()
+    );
+  }
+
+  async getColabMessage(id: number): Promise<ColabMessage | undefined> {
+    return this.colabMessages.get(id);
+  }
+
+  async createColabMessage(insertMessage: InsertColabMessage): Promise<ColabMessage> {
+    const id = this.currentColabMessageId++;
+    const message: ColabMessage = {
+      ...insertMessage,
+      id,
+      createdAt: new Date()
+    };
+    this.colabMessages.set(id, message);
+    return message;
+  }
+
+  async searchColabMessages(query: string): Promise<ColabMessage[]> {
+    const allMessages = await this.getColabMessages();
+    if (!query.trim()) {
+      return allMessages;
+    }
+    
+    const lowerQuery = query.toLowerCase();
+    return allMessages.filter(message => 
+      message.content.toLowerCase().includes(lowerQuery) ||
+      message.username.toLowerCase().includes(lowerQuery)
+    );
+  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -918,6 +968,43 @@ export class DatabaseStorage implements IStorage {
 
   async deleteVacancy(id: number): Promise<void> {
     await db.delete(vacancies).where(eq(vacancies.id, id));
+  }
+
+  // Colab message operations
+  async getColabMessages(): Promise<ColabMessage[]> {
+    return await db.select().from(colabMessages).orderBy(colabMessages.createdAt);
+  }
+
+  async getColabMessage(id: number): Promise<ColabMessage | undefined> {
+    const [message] = await db.select().from(colabMessages).where(eq(colabMessages.id, id));
+    return message || undefined;
+  }
+
+  async createColabMessage(insertMessage: InsertColabMessage): Promise<ColabMessage> {
+    const [message] = await db
+      .insert(colabMessages)
+      .values(insertMessage)
+      .returning();
+    return message;
+  }
+
+  async searchColabMessages(query: string): Promise<ColabMessage[]> {
+    if (!query.trim()) {
+      return await this.getColabMessages();
+    }
+    
+    // Using ilike for case-insensitive search
+    const lowerQuery = `%${query.toLowerCase()}%`;
+    return await db
+      .select()
+      .from(colabMessages)
+      .where(
+        or(
+          ilike(colabMessages.content, lowerQuery),
+          ilike(colabMessages.username, lowerQuery)
+        )
+      )
+      .orderBy(colabMessages.createdAt);
   }
 }
 
