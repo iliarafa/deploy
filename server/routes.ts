@@ -788,10 +788,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const message = await storage.createColabMessage(messageData);
       
       // Broadcast to WebSocket clients for real-time updates
-      wsManager.broadcast({
-        type: 'colab_message',
-        data: message
-      });
+      wsManager.notifyColabMessage(message);
       
       res.status(201).json(message);
     } catch (error) {

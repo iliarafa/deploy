@@ -1,5 +1,14 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
+import { IncomingMessage } from 'http';
+import { parse } from 'url';
+import { storage } from './storage';
+
+interface AuthenticatedWebSocket extends WebSocket {
+  userId?: number;
+  username?: string;
+  role?: string;
+}
 
 interface WebSocketMessage {
   type: 'task_created' | 'material_request_created' | 'task_updated' | 'ping' | 'registration_request' | 'registration_reviewed' | 'user_created' | 'vacancy_created' | 'colab_message';
@@ -11,7 +20,7 @@ interface WebSocketMessage {
 
 class WebSocketManager {
   private wss: WebSocketServer | null = null;
-  private clients: Set<WebSocket> = new Set();
+  private clients: Set<AuthenticatedWebSocket> = new Set();
 
   init(server: Server) {
     this.wss = new WebSocketServer({ 
@@ -19,9 +28,46 @@ class WebSocketManager {
       path: '/ws'
     });
 
-    this.wss.on('connection', (ws: WebSocket) => {
-      console.log('WebSocket client connected');
-      this.clients.add(ws);
+    this.wss.on('connection', async (ws: AuthenticatedWebSocket, req: IncomingMessage) => {
+      try {
+        // Parse URL to get authentication token
+        const url = parse(req.url || '', true);
+        const token = url.query.token as string;
+        
+        if (!token) {
+          console.log('WebSocket connection rejected: No token provided');
+          ws.close(1008, 'Authentication required');
+          return;
+        }
+
+        // Validate session token using the same method as HTTP authentication
+        const session = await storage.getValidSession(token);
+        if (!session) {
+          console.log('WebSocket connection rejected: Invalid or expired session');
+          ws.close(1008, 'Invalid or expired session');
+          return;
+        }
+
+        // Get user details
+        const user = await storage.getUser(session.userId);
+        if (!user || !user.isApproved || !user.isActive) {
+          console.log('WebSocket connection rejected: User not authorized');
+          ws.close(1008, 'User not authorized');
+          return;
+        }
+
+        // Attach authenticated user info to the WebSocket
+        ws.userId = user.id;
+        ws.username = user.username;
+        ws.role = user.role;
+        
+        console.log(`WebSocket client connected: ${user.username} (${user.role})`);
+        this.clients.add(ws);
+      } catch (error) {
+        console.error('WebSocket authentication error:', error);
+        ws.close(1011, 'Authentication failed');
+        return;
+      }
 
       ws.on('message', (message: string) => {
         try {
@@ -71,6 +117,13 @@ class WebSocketManager {
     this.broadcast({
       type: 'material_request_created',
       data: request
+    });
+  }
+
+  notifyColabMessage(message: any) {
+    this.broadcast({
+      type: 'colab_message',
+      data: message
     });
   }
 }

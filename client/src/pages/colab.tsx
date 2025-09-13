@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,11 +20,77 @@ export default function Colab() {
   const [messageContent, setMessageContent] = useState("");
   const { user } = useAuth();
   const { toast } = useToast();
+  const wsRef = useRef<WebSocket | null>(null);
 
   // Fetch all messages
   const { data: messages = [], isLoading } = useQuery<ColabMessage[]>({
     queryKey: ["/api/colab-messages"],
   });
+
+  // WebSocket connection for real-time updates
+  useEffect(() => {
+    if (!user) return;
+
+    const sessionToken = localStorage.getItem('auth_session');
+    if (!sessionToken) {
+      console.error('No session token available for WebSocket connection');
+      return;
+    }
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws?token=${encodeURIComponent(sessionToken)}`;
+    
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log('WebSocket connected to Colab');
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        
+        if (message.type === 'colab_message' && message.data) {
+          // Add new message to cache in real-time
+          queryClient.setQueryData<ColabMessage[]>(["/api/colab-messages"], (oldData) => {
+            if (!oldData) return [message.data];
+            
+            // Check if message already exists to avoid duplicates
+            const messageExists = oldData.some(msg => msg.id === message.data.id);
+            if (messageExists) return oldData;
+            
+            // Add new message to the end of the list
+            return [...oldData, message.data];
+          });
+
+          // Show notification for messages from other users
+          if (message.data.userId !== user.id) {
+            toast({
+              title: `New message from ${message.data.username}`,
+              description: message.data.content.substring(0, 100) + (message.data.content.length > 100 ? '...' : ''),
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
+      }
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket disconnected from Colab');
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    // Cleanup on unmount
+    return () => {
+      ws.close();
+      wsRef.current = null;
+    };
+  }, [user, queryClient, toast]);
 
   // Create message mutation
   const createMessageMutation = useMutation({
