@@ -11,6 +11,7 @@ import { Search, Calendar, MapPin, Package, Hash, Plus } from "lucide-react";
 import { useState } from "react";
 import { formatDate } from "@/lib/date-utils";
 import MaterialRequestModal from "@/components/materials/material-request-modal";
+import MaterialRequestDetailsModal from "@/components/materials/material-request-details-modal";
 import { useAuth } from "@/contexts/auth-context";
 
 export default function Materials() {
@@ -18,6 +19,8 @@ export default function Materials() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<MaterialRequest | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const { isLoading: authLoading } = useAuth();
 
   const { data: requests = [], isLoading } = useQuery<MaterialRequest[]>({
@@ -63,6 +66,16 @@ export default function Materials() {
       case "tools": return "bg-purple-100 text-purple-800";
       default: return "bg-gray-100 text-gray-800";
     }
+  };
+
+  const handleViewDetails = (request: MaterialRequest) => {
+    setSelectedRequest(request);
+    setIsDetailsModalOpen(true);
+  };
+
+  const handleCloseDetailsModal = () => {
+    setIsDetailsModalOpen(false);
+    setSelectedRequest(null);
   };
 
   return (
@@ -183,7 +196,12 @@ export default function Materials() {
                         </Badge>
                       </div>
                       
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleViewDetails(request)}
+                        data-testid={`button-view-details-${request.id}`}
+                      >
                         View Details
                       </Button>
                     </div>
@@ -198,6 +216,12 @@ export default function Materials() {
       <MaterialRequestModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
+      />
+      
+      <MaterialRequestDetailsModal
+        request={selectedRequest}
+        isOpen={isDetailsModalOpen}
+        onClose={handleCloseDetailsModal}
       />
     </div>
   );
