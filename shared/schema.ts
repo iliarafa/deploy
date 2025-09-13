@@ -99,6 +99,14 @@ export const vacancies = pgTable("vacancies", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const colabMessages = pgTable("colab_messages", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  username: text("username").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   approvedByUser: one(users, {
@@ -106,6 +114,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
     references: [users.id],
   }),
   sessions: many(userSessions),
+  colabMessages: many(colabMessages),
 }));
 
 export const userRegistrationRequestsRelations = relations(userRegistrationRequests, ({ one }) => ({
@@ -130,6 +139,13 @@ export const communicationsRelations = relations(communications, ({ one }) => ({
   task: one(tasks, {
     fields: [communications.taskId],
     references: [tasks.id],
+  }),
+}));
+
+export const colabMessagesRelations = relations(colabMessages, ({ one }) => ({
+  user: one(users, {
+    fields: [colabMessages.userId],
+    references: [users.id],
   }),
 }));
 
@@ -222,6 +238,11 @@ export const insertVacancySchema = createInsertSchema(vacancies).omit({
   createdAt: true,
 });
 
+export const insertColabMessageSchema = createInsertSchema(colabMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpdateUser = z.infer<typeof updateUserSchema>;
@@ -239,4 +260,6 @@ export type Communication = typeof communications.$inferSelect;
 export type InsertCommunication = z.infer<typeof insertCommunicationSchema>;
 export type Vacancy = typeof vacancies.$inferSelect;
 export type InsertVacancy = z.infer<typeof insertVacancySchema>;
+export type ColabMessage = typeof colabMessages.$inferSelect;
+export type InsertColabMessage = z.infer<typeof insertColabMessageSchema>;
 export type ChangePassword = z.infer<typeof changePasswordSchema>;
