@@ -67,6 +67,7 @@ export const tasks = pgTable("tasks", {
 
 export const materialRequests = pgTable("material_requests", {
   id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
   materialType: text("material_type").notNull(),
   description: text("description").notNull(),
   quantity: integer("quantity").notNull(),
@@ -115,6 +116,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   }),
   sessions: many(userSessions),
   colabMessages: many(colabMessages),
+  materialRequests: many(materialRequests),
 }));
 
 export const userRegistrationRequestsRelations = relations(userRegistrationRequests, ({ one }) => ({
@@ -145,6 +147,13 @@ export const communicationsRelations = relations(communications, ({ one }) => ({
 export const colabMessagesRelations = relations(colabMessages, ({ one }) => ({
   user: one(users, {
     fields: [colabMessages.userId],
+    references: [users.id],
+  }),
+}));
+
+export const materialRequestsRelations = relations(materialRequests, ({ one }) => ({
+  user: one(users, {
+    fields: [materialRequests.userId],
     references: [users.id],
   }),
 }));
