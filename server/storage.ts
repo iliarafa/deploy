@@ -57,6 +57,7 @@ export interface IStorage {
   updateUser(id: number, updates: UpdateUser): Promise<User>;
   updateUserPassword(id: number, hashedPassword: string): Promise<User>;
   getUsers(): Promise<User[]>;
+  getUsersByRole(roles: string[]): Promise<User[]>;
   deactivateUser(id: number): Promise<User>;
   approveUser(id: number, approvedBy: number, role: string): Promise<User>;
   
@@ -345,6 +346,10 @@ export class MemStorage implements IStorage {
 
   async getUsers(): Promise<User[]> {
     return Array.from(this.users.values()).filter(user => user.isActive);
+  }
+
+  async getUsersByRole(roles: string[]): Promise<User[]> {
+    return Array.from(this.users.values()).filter(user => user.isActive && roles.includes(user.role));
   }
 
   async checkUserPermission(userId: number, permission: Permission): Promise<boolean> {
@@ -685,6 +690,15 @@ export class DatabaseStorage implements IStorage {
 
   async getUsers(): Promise<User[]> {
     return await db.select().from(users).where(eq(users.isActive, true));
+  }
+
+  async getUsersByRole(roles: string[]): Promise<User[]> {
+    return await db.select().from(users).where(
+      and(
+        eq(users.isActive, true),
+        or(...roles.map(role => eq(users.role, role)))
+      )
+    );
   }
 
   async deactivateUser(id: number): Promise<User> {
