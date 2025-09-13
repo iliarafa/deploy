@@ -105,13 +105,12 @@ export default function Header() {
               
               {hasFullNavAccess && (
                 <Link href="/admin">
-                  <span className={`font-medium pb-2 cursor-pointer flex items-center gap-1 ${
+                  <span className={`font-medium pb-2 cursor-pointer ${
                     isActive("/admin") 
                       ? "text-primary border-b-2 border-primary" 
                       : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
                   }`}>
-                    <Shield className="w-4 h-4" />
-                    Admin Panel
+                    Admin
                   </span>
                 </Link>
               )}

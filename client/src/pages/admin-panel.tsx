@@ -268,11 +268,7 @@ export default function AdminPanel() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mb-20 md:mb-0">
         <div className="container mx-auto space-y-6" data-testid="admin-panel">
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold" data-testid="admin-panel-title">Admin Panel</h1>
-            <div className="flex items-center gap-2">
-              <Shield className="h-6 w-6 text-blue-600" />
-              <span className="text-sm text-muted-foreground">Administrator Access</span>
-            </div>
+            <h1 className="text-3xl font-bold" data-testid="admin-panel-title">Admin</h1>
           </div>
 
       <Tabs defaultValue="requests" className="w-full">
