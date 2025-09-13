@@ -846,6 +846,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/colab-messages/:id", authenticate, enforcePasswordChange, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      const userRole = req.user?.role;
+      if (!userId || !userRole) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const messageId = parseInt(req.params.id);
+      if (isNaN(messageId)) {
+        return res.status(400).json({ message: "Invalid message ID" });
+      }
+
+      await storage.deleteColabMessage(messageId, userId, userRole);
+      
+      // Broadcast deletion to WebSocket clients for real-time updates
+      wsManager.notifyColabMessageDeleted(messageId);
+      
+      res.status(204).send();
+    } catch (error: any) {
+      console.error("Error deleting colab message:", error);
+      if (error.message === 'Not authorized to delete this message') {
+        return res.status(403).json({ message: "Not authorized to delete this message" });
+      }
+      if (error.message?.includes('not found')) {
+        return res.status(404).json({ message: "Message not found" });
+      }
+      res.status(500).json({ message: "Failed to delete colab message" });
+    }
+  });
+
   // Vacancy routes
   app.get("/api/vacancies", authenticate, enforcePasswordChange, async (req, res) => {
     try {
