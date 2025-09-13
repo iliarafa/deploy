@@ -12,8 +12,15 @@ class WebSocketClient {
 
   connect() {
     try {
+      // Get session token for authentication
+      const sessionToken = localStorage.getItem('auth_session');
+      if (!sessionToken) {
+        console.log('WebSocket connection skipped: No session token available');
+        return;
+      }
+
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      const wsUrl = `${protocol}//${window.location.host}/ws?token=${encodeURIComponent(sessionToken)}`;
       
       this.ws = new WebSocket(wsUrl);
 
