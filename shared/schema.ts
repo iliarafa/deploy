@@ -249,6 +249,8 @@ export const insertVacancySchema = createInsertSchema(vacancies)
     createdAt: true,
   })
   .extend({
+    property: z.string().min(1, "Property is required"),
+    apartmentNumber: z.string().min(1, "Apartment number is required"),
     startDate: z.preprocess(
       (val) => val ? new Date(val as string) : undefined,
       z.date().optional()

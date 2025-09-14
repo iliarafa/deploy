@@ -74,8 +74,7 @@ export default function VacancyModal({ isOpen, onClose }: VacancyModalProps) {
   });
 
   const handleImageUpload = async () => {
-    const response = await fetch('/api/objects/upload', { method: 'POST' });
-    const { uploadURL } = await response.json();
+    const { uploadURL } = await apiRequest('POST', '/api/objects/upload');
     return {
       method: 'PUT' as const,
       url: uploadURL,
