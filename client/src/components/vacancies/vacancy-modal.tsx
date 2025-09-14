@@ -14,6 +14,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import type { UploadResult } from '@uppy/core';
+import { format } from "date-fns";
 
 interface VacancyModalProps {
   isOpen: boolean;
@@ -37,7 +38,8 @@ export default function VacancyModal({ isOpen, onClose }: VacancyModalProps) {
     defaultValues: {
       property: "",
       apartmentNumber: "",
-      previousTenantDuration: "",
+      startDate: undefined,
+      endDate: undefined,
       images: [],
       notes: "",
       status: "vacant",
@@ -157,12 +159,38 @@ export default function VacancyModal({ isOpen, onClose }: VacancyModalProps) {
 
             <FormField
               control={form.control}
-              name="previousTenantDuration"
+              name="startDate"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Previous Tenant Occupancy Duration</FormLabel>
+                  <FormLabel>Start Date</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., 2 years, 6 months" {...field} value={field.value || ""} />
+                    <Input 
+                      type="datetime-local" 
+                      {...field}
+                      value={field.value ? format(new Date(field.value), "yyyy-MM-dd'T'HH:mm") : ""}
+                      onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                      data-testid="input-start-date"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="endDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>End Date</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="datetime-local" 
+                      {...field}
+                      value={field.value ? format(new Date(field.value), "yyyy-MM-dd'T'HH:mm") : ""}
+                      onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                      data-testid="input-end-date"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

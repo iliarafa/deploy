@@ -25,7 +25,8 @@ import {
   updateUserSchema,
   insertUserSchema,
   changePasswordSchema,
-  insertColabMessageSchema
+  insertColabMessageSchema,
+  insertVacancySchema
 } from "@shared/schema";
 import { z } from "zod";
 import { wsManager } from "./websocket";
@@ -956,16 +957,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/vacancies", authenticate, enforcePasswordChange, async (req, res) => {
+  app.post("/api/vacancies", authenticate, enforcePasswordChange, requirePermission('manage_vacancies'), async (req, res) => {
     try {
-      const validatedData = { 
-        property: req.body.property,
-        apartmentNumber: req.body.apartmentNumber,
-        previousTenantDuration: req.body.previousTenantDuration || null,
-        images: req.body.images || [],
-        notes: req.body.notes || null,
-        status: req.body.status || "vacant"
-      };
+      const validatedData = insertVacancySchema.parse(req.body);
       const vacancy = await storage.createVacancy(validatedData);
       
       // Send real-time notification
@@ -977,13 +971,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(201).json(vacancy);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid vacancy data", errors: error.errors });
+      }
       console.error("Error creating vacancy:", error);
       res.status(500).json({ message: "Failed to create vacancy" });
     }
   });
 
+  app.put("/api/vacancies/:id", authenticate, enforcePasswordChange, requirePermission('manage_vacancies'), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertVacancySchema.partial().parse(req.body);
+      const vacancy = await storage.updateVacancy(id, validatedData);
+      res.json(vacancy);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid vacancy data", errors: error.errors });
+      }
+      if (error instanceof Error && error.message.includes("not found")) {
+        return res.status(404).json({ message: "Vacancy not found" });
+      }
+      res.status(500).json({ message: "Failed to update vacancy" });
+    }
+  });
+
   // Object storage routes
-  app.post("/api/objects/upload", async (req, res) => {
+  app.post("/api/objects/upload", authenticate, enforcePasswordChange, requirePermission('manage_vacancies'), async (req, res) => {
     try {
       const { ObjectStorageService } = await import("./objectStorage");
       const objectStorageService = new ObjectStorageService();
@@ -995,7 +1009,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/vacancy-images", async (req, res) => {
+  app.put("/api/vacancy-images", authenticate, enforcePasswordChange, requirePermission('manage_vacancies'), async (req, res) => {
     try {
       if (!req.body.imageURL) {
         return res.status(400).json({ error: "imageURL is required" });

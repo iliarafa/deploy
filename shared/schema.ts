@@ -243,10 +243,21 @@ export const insertCommunicationSchema = createInsertSchema(communications).omit
   createdAt: true,
 });
 
-export const insertVacancySchema = createInsertSchema(vacancies).omit({
-  id: true,
-  createdAt: true,
-});
+export const insertVacancySchema = createInsertSchema(vacancies)
+  .omit({
+    id: true,
+    createdAt: true,
+  })
+  .extend({
+    startDate: z.preprocess(
+      (val) => val ? new Date(val as string) : undefined,
+      z.date().optional()
+    ),
+    endDate: z.preprocess(
+      (val) => val ? new Date(val as string) : undefined,
+      z.date().optional()
+    ),
+  });
 
 export const insertColabMessageSchema = createInsertSchema(colabMessages).omit({
   id: true,

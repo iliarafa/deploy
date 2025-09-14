@@ -18,6 +18,7 @@ import Login from "@/pages/login";
 import Log from "@/pages/log";
 import Profile from "@/pages/profile";
 import Colab from "@/pages/colab";
+import Vacancies from "@/pages/vacancies";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -52,6 +53,7 @@ function Router() {
       <Route path="/log" component={Log} />
       <Route path="/tasks" component={Tasks} />
       <Route path="/materials" component={Materials} />
+      <Route path="/vacancies" component={Vacancies} />
       <Route path="/reports" component={Reports} />
       <Route path="/admin" component={AdminPanel} />
       <Route path="/colab" component={Colab} />
