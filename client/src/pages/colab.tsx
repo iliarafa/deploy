@@ -7,13 +7,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Search, Send, MessageSquare, Users, Clock, Trash2 } from "lucide-react";
+import { Search, Send, MessageSquare, Users, Clock, Trash2, Home } from "lucide-react";
 import TextHighlighter from "@/components/search/text-highlighter";
 import { filterMessages, countSearchMatches } from "@/components/search/search-utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
+import { Link } from "wouter";
 import type { ColabMessage } from "@shared/schema";
 
 export default function Colab() {
@@ -189,11 +190,19 @@ export default function Colab() {
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-          <div className="flex items-center space-x-3 mb-4">
-            <MessageSquare className="w-6 h-6 text-primary" />
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-colab-title">
-              Team Collaboration
-            </h1>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <MessageSquare className="w-6 h-6 text-primary" />
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-colab-title">
+                Team Collaboration
+              </h1>
+            </div>
+            <Link href="/">
+              <a className="flex items-center space-x-2 text-gray-600 hover:text-primary transition-colors" data-testid="link-home">
+                <Home className="w-5 h-5" />
+                <span className="hidden sm:inline">Home</span>
+              </a>
+            </Link>
           </div>
           <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
             <div className="flex items-center space-x-1">

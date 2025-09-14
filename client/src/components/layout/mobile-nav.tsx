@@ -16,8 +16,8 @@ export default function MobileNav() {
   const hasFullNavAccess = user && (user.role === 'admin' || user.role === 'project_manager');
 
   return (
-    <nav className="md:hidden bg-white border-t border-gray-200 fixed bottom-0 left-0 right-0 z-50">
-      <div className="flex justify-around py-2">
+    <nav className="md:hidden bg-white border-t border-gray-200 fixed bottom-0 left-0 right-0 z-50 w-full">
+      <div className="flex justify-around py-2 bg-white">
         <Link href="/">
           <a className={`flex flex-col items-center py-2 px-4 ${
             isActive("/") ? "text-primary" : "text-gray-500"
