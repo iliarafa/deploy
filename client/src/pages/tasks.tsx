@@ -176,27 +176,28 @@ export default function Tasks() {
                       </div>
                     )}
                     
-                    <div className="flex justify-between items-center pt-2">
-                      <div className="flex gap-2">
-                        <Badge className={getStatusColor(task.status)}>
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 pt-2">
+                      <div className="flex gap-1 flex-wrap">
+                        <Badge className={`${getStatusColor(task.status)} text-xs px-2 py-1`}>
                           {task.status}
                         </Badge>
-                        <Badge className={getPriorityColor(task.priority)}>
+                        <Badge className={`${getPriorityColor(task.priority)} text-xs px-2 py-1`}>
                           {task.priority}
                         </Badge>
                       </div>
                       
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-shrink-0">
                         <TaskStatusUpdate task={task} compact={true} />
                         <Button 
                           variant="outline" 
                           size="sm"
+                          className="text-xs px-3 py-1 h-8"
                           onClick={() => {
                             setSelectedTask(task);
                             setIsDetailModalOpen(true);
                           }}
                         >
-                          View Details
+                          Details
                         </Button>
                       </div>
                     </div>
