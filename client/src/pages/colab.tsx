@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Search, Send, MessageSquare, Users, Clock, Trash2 } from "lucide-react";
+import MobileNav from "@/components/layout/mobile-nav";
 import TextHighlighter from "@/components/search/text-highlighter";
 import { filterMessages, countSearchMatches } from "@/components/search/search-utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -187,7 +188,8 @@ export default function Colab() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <MobileNav />
+      <div className="max-w-4xl mx-auto space-y-6 mb-20 md:mb-0">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
           <div className="flex items-center space-x-3 mb-4">
