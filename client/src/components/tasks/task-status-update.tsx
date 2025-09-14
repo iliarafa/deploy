@@ -63,9 +63,9 @@ export default function TaskStatusUpdate({ task, compact = false }: TaskStatusUp
   if (compact) {
     return (
       <Select value={selectedStatus} onValueChange={handleStatusChange} disabled={updateStatusMutation.isPending}>
-        <SelectTrigger className="w-32" data-testid="status-select-compact">
-          <div className="flex items-center gap-2">
-            <StatusIcon className="w-4 h-4" />
+        <SelectTrigger className="w-20 h-8 text-xs px-3 py-1" data-testid="status-select-compact">
+          <div className="flex items-center gap-1">
+            <StatusIcon className="w-3 h-3" />
             <SelectValue />
           </div>
         </SelectTrigger>

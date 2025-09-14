@@ -191,7 +191,7 @@ export default function Tasks() {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          className="text-xs px-3 py-1 h-8"
+                          className="text-xs px-3 py-1 h-8 w-20"
                           onClick={() => {
                             setSelectedTask(task);
                             setIsDetailModalOpen(true);
