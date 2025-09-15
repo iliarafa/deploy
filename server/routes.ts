@@ -16,6 +16,19 @@ function hashPassword(password: string): string {
   const hash = pbkdf2Sync(password, salt, 10000, 64, 'sha256').toString('hex');
   return `${salt}:${hash}`;
 }
+
+// Date normalization utility for API boundary - ensures storage gets proper Date|null
+function normalizeVacancyDates(data: any) {
+  const result = { ...data };
+  if (result.startDate !== undefined) {
+    result.startDate = result.startDate ? new Date(result.startDate) : null;
+  }
+  if (result.endDate !== undefined) {
+    result.endDate = result.endDate ? new Date(result.endDate) : null;
+  }
+  return result;
+}
+
 import { 
   insertTaskSchema, 
   insertMaterialRequestSchema, 
@@ -495,7 +508,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .slice(0, 4); // Enforce 4-item limit
       
       // Remove duplicates
-      const uniqueShortcuts = [...new Set(filteredShortcuts)];
+      const uniqueShortcuts = Array.from(new Set(filteredShortcuts));
 
       // Update navigation preferences - storage returns { navShortcuts: NavShortcutId[] }
       const result = await storage.updateUserNavPrefs(userId, uniqueShortcuts);
@@ -1038,7 +1051,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/vacancies", authenticate, enforcePasswordChange, requirePermission('manage_vacancies'), async (req, res) => {
     try {
       const validatedData = insertVacancySchema.parse(req.body);
-      const vacancy = await storage.createVacancy(validatedData);
+      const normalizedData = normalizeVacancyDates(validatedData);
+      const vacancy = await storage.createVacancy(normalizedData);
       
       // Send real-time notification
       try {
@@ -1061,7 +1075,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const validatedData = insertVacancySchema.partial().parse(req.body);
-      const vacancy = await storage.updateVacancy(id, validatedData);
+      const normalizedData = normalizeVacancyDates(validatedData);
+      const vacancy = await storage.updateVacancy(id, normalizedData);
       res.json(vacancy);
     } catch (error) {
       if (error instanceof z.ZodError) {
