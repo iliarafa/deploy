@@ -50,7 +50,17 @@ export default function Header() {
                     ? "text-primary border-b-2 border-primary" 
                     : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
                 }`}>
-                  Cal
+                  Today
+                </span>
+              </Link>
+              
+              <Link href="/calendar">
+                <span className={`text-sm pb-2 cursor-pointer ${
+                  isActive("/calendar") 
+                    ? "text-primary border-b-2 border-primary" 
+                    : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
+                }`}>
+                  Calendar
                 </span>
               </Link>
               

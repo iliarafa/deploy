@@ -121,7 +121,7 @@ export default function TaskModal({ isOpen, onClose, prefilledDate, prefilledTim
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Task</DialogTitle>
         </DialogHeader>
@@ -315,6 +315,7 @@ export default function TaskModal({ isOpen, onClose, prefilledDate, prefilledTim
                 type="submit" 
                 disabled={createTaskMutation.isPending}
                 className="bg-primary hover:bg-blue-700"
+                data-testid="button-create-task"
               >
                 {createTaskMutation.isPending ? "Creating..." : "Create Task"}
               </Button>

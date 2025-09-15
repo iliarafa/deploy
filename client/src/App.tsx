@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "@/contexts/auth-context";
 import { ThemeProvider } from "@/contexts/theme-context";
 import LandingPage from "@/components/landing-page";
 import NotFound from "@/pages/not-found";
+import Today from "@/pages/today";
 import Calendar from "@/pages/calendar";
 import Tasks from "@/pages/tasks";
 import Materials from "@/pages/materials";
@@ -48,7 +49,7 @@ function Router() {
   // Show full app if authenticated
   return (
     <Switch>
-      <Route path="/" component={Calendar} />
+      <Route path="/" component={Today} />
       <Route path="/calendar" component={Calendar} />
       <Route path="/log" component={Log} />
       <Route path="/tasks" component={Tasks} />
