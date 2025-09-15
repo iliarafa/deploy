@@ -262,14 +262,8 @@ export const insertVacancySchema = createInsertSchema(vacancies)
   .extend({
     property: z.string().min(1, "Property is required"),
     apartmentNumber: z.string().min(1, "Apartment number is required"),
-    startDate: z.preprocess(
-      (val) => val ? new Date(val as string) : undefined,
-      z.date().optional()
-    ),
-    endDate: z.preprocess(
-      (val) => val ? new Date(val as string) : undefined,
-      z.date().optional()
-    ),
+    startDate: z.string().datetime().optional().or(z.date().optional()),
+    endDate: z.string().datetime().optional().or(z.date().optional()),
   });
 
 export const insertColabMessageSchema = createInsertSchema(colabMessages).omit({

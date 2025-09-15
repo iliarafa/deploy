@@ -32,6 +32,17 @@ import { db } from "./db";
 import { eq, and, gte, lte, lt, or, ilike } from "drizzle-orm";
 import { randomBytes, createHash, pbkdf2Sync } from "crypto";
 
+// Date conversion utility for handling string dates from form inputs
+function convertDate(dateInput: string | Date | null | undefined): Date | null {
+  if (!dateInput) return null;
+  if (dateInput instanceof Date) return dateInput;
+  if (typeof dateInput === 'string') {
+    const date = new Date(dateInput);
+    return isNaN(date.getTime()) ? null : date;
+  }
+  return null;
+}
+
 // Utility functions for password hashing and session management
 function hashPassword(password: string): string {
   const salt = randomBytes(32).toString('hex');
@@ -584,8 +595,8 @@ export class MemStorage implements IStorage {
       status: insertVacancy.status || "vacant",
       notes: insertVacancy.notes || null,
       images: insertVacancy.images || null,
-      startDate: insertVacancy.startDate || null,
-      endDate: insertVacancy.endDate || null,
+      startDate: convertDate(insertVacancy.startDate),
+      endDate: convertDate(insertVacancy.endDate),
       createdAt: new Date()
     };
     this.vacancies.set(id, vacancy);
@@ -597,7 +608,20 @@ export class MemStorage implements IStorage {
     if (!existingVacancy) {
       throw new Error(`Vacancy with id ${id} not found`);
     }
-    const updatedVacancy = { ...existingVacancy, ...updates };
+    const processedUpdates: Partial<Vacancy> = {};
+    // Copy over all fields except dates which need conversion
+    if (updates.property !== undefined) processedUpdates.property = updates.property;
+    if (updates.apartmentNumber !== undefined) processedUpdates.apartmentNumber = updates.apartmentNumber;
+    if (updates.status !== undefined) processedUpdates.status = updates.status;
+    if (updates.notes !== undefined) processedUpdates.notes = updates.notes;
+    if (updates.images !== undefined) processedUpdates.images = updates.images;
+    if (updates.startDate !== undefined) {
+      processedUpdates.startDate = convertDate(updates.startDate);
+    }
+    if (updates.endDate !== undefined) {
+      processedUpdates.endDate = convertDate(updates.endDate);
+    }
+    const updatedVacancy = { ...existingVacancy, ...processedUpdates };
     this.vacancies.set(id, updatedVacancy);
     return updatedVacancy;
   }
@@ -1033,17 +1057,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createVacancy(insertVacancy: InsertVacancy): Promise<Vacancy> {
+    const processedVacancy = {
+      ...insertVacancy,
+      startDate: convertDate(insertVacancy.startDate),
+      endDate: convertDate(insertVacancy.endDate),
+    };
     const [vacancy] = await db
       .insert(vacancies)
-      .values(insertVacancy)
+      .values(processedVacancy)
       .returning();
     return vacancy;
   }
 
   async updateVacancy(id: number, updates: Partial<InsertVacancy>): Promise<Vacancy> {
+    const processedUpdates: any = { ...updates };
+    if (updates.startDate !== undefined) {
+      processedUpdates.startDate = convertDate(updates.startDate);
+    }
+    if (updates.endDate !== undefined) {
+      processedUpdates.endDate = convertDate(updates.endDate);
+    }
     const [vacancy] = await db
       .update(vacancies)
-      .set(updates)
+      .set(processedUpdates)
       .where(eq(vacancies.id, id))
       .returning();
     return vacancy;
