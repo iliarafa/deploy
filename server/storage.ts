@@ -364,13 +364,13 @@ export class MemStorage implements IStorage {
       throw new Error(`User with id ${userId} not found`);
     }
     // Ensure we always return an array, even if navShortcuts is undefined or an object
-    const navShortcuts = Array.isArray(user.navShortcuts) ? user.navShortcuts : [];
+    const navShortcuts = Array.isArray(user.navShortcuts) ? user.navShortcuts as NavShortcutId[] : [];
     return { navShortcuts };
   }
 
   async updateUserNavPrefs(userId: number, navShortcuts: NavShortcutId[]): Promise<{ navShortcuts: NavShortcutId[] }> {
     const user = await this.updateUser(userId, { navShortcuts });
-    const resultShortcuts = Array.isArray(user.navShortcuts) ? user.navShortcuts : [];
+    const resultShortcuts = Array.isArray(user.navShortcuts) ? user.navShortcuts as NavShortcutId[] : [];
     return { navShortcuts: resultShortcuts };
   }
 
@@ -1111,7 +1111,7 @@ export class DatabaseStorage implements IStorage {
       throw new Error(`User with id ${userId} not found`);
     }
     // Ensure we always return an array, even if navShortcuts is undefined or an object
-    const navShortcuts = Array.isArray(user.navShortcuts) ? user.navShortcuts : [];
+    const navShortcuts = Array.isArray(user.navShortcuts) ? user.navShortcuts as NavShortcutId[] : [];
     return { navShortcuts };
   }
 
@@ -1124,7 +1124,7 @@ export class DatabaseStorage implements IStorage {
     if (!user) {
       throw new Error(`User with id ${userId} not found`);
     }
-    const resultShortcuts = Array.isArray(user.navShortcuts) ? user.navShortcuts : [];
+    const resultShortcuts = Array.isArray(user.navShortcuts) ? user.navShortcuts as NavShortcutId[] : [];
     return { navShortcuts: resultShortcuts };
   }
 
