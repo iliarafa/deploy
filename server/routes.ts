@@ -26,7 +26,8 @@ import {
   insertUserSchema,
   changePasswordSchema,
   insertColabMessageSchema,
-  insertVacancySchema
+  insertVacancySchema,
+  updateNavPrefsSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { wsManager } from "./websocket";
@@ -40,6 +41,21 @@ import {
   enforcePasswordChange
 } from "./auth-middleware";
 import { type UserRole } from "@shared/roles";
+import { type NavShortcutId } from "@shared/schema";
+
+// Role-based navigation shortcuts configuration
+function getShortcutsForRole(role: UserRole): NavShortcutId[] {
+  const roleShortcuts: Record<UserRole, NavShortcutId[]> = {
+    worker: ["log", "colab", "calendar", "materials"],
+    project_manager: ["tasks", "materials", "vacancies", "colab", "calendar"],
+    admin: ["tasks", "materials", "vacancies", "admin", "calendar"],
+    supervisor: ["tasks", "materials", "colab", "calendar"],
+    inspector: ["tasks", "materials", "colab", "calendar"],
+    client: ["tasks", "calendar", "colab"]
+  };
+  
+  return roleShortcuts[role] || [];
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -425,6 +441,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Update profile error:", error);
       res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
+  // Navigation preferences endpoints
+  app.get("/api/me/nav-preferences", authenticate, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      // Storage already returns { navShortcuts: NavShortcutId[] }
+      const result = await storage.getUserNavPrefs(userId);
+      res.json(result);
+    } catch (error) {
+      console.error("Get navigation preferences error:", error);
+      res.status(500).json({ message: "Failed to get navigation preferences" });
+    }
+  });
+
+  app.patch("/api/me/nav-preferences", authenticate, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+
+      // Validate request body
+      const validation = updateNavPrefsSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: "Invalid navigation preferences",
+          errors: validation.error.errors 
+        });
+      }
+
+      const { navShortcuts } = validation.data;
+      if (!navShortcuts) {
+        return res.status(400).json({ message: "Navigation shortcuts are required" });
+      }
+
+      // Get user to check role for filtering
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Role-based filtering and 4-item limit - server-side validation
+      const allowedShortcuts = getShortcutsForRole(user.role as UserRole);
+      const filteredShortcuts = navShortcuts
+        .filter(shortcut => allowedShortcuts.includes(shortcut))
+        .slice(0, 4); // Enforce 4-item limit
+      
+      // Remove duplicates
+      const uniqueShortcuts = [...new Set(filteredShortcuts)];
+
+      // Update navigation preferences - storage returns { navShortcuts: NavShortcutId[] }
+      const result = await storage.updateUserNavPrefs(userId, uniqueShortcuts);
+      res.json(result);
+    } catch (error) {
+      console.error("Update navigation preferences error:", error);
+      res.status(500).json({ message: "Failed to update navigation preferences" });
     }
   });
 

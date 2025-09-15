@@ -24,7 +24,8 @@ import {
   type Vacancy,
   type InsertVacancy,
   type ColabMessage,
-  type InsertColabMessage
+  type InsertColabMessage,
+  type NavShortcutId
 } from "@shared/schema";
 import { type UserRole, type Permission, hasPermission, getUserPermissions } from "@shared/roles";
 import { db } from "./db";
@@ -109,6 +110,10 @@ export interface IStorage {
   deleteColabMessage(id: number, userId: number, userRole: UserRole): Promise<void>;
   searchColabMessages(query: string): Promise<ColabMessage[]>;
   
+  // Navigation preferences
+  getUserNavPrefs(userId: number): Promise<{ navShortcuts: NavShortcutId[] }>;
+  updateUserNavPrefs(userId: number, navShortcuts: NavShortcutId[]): Promise<{ navShortcuts: NavShortcutId[] }>;
+  
   // Role-based authorization helpers
   checkUserPermission(userId: number, permission: Permission): Promise<boolean>;
 }
@@ -178,6 +183,7 @@ export class MemStorage implements IStorage {
       lastName: insertUser.lastName || null,
       role: insertUser.role || "worker",
       permissions: [],
+      navShortcuts: [], // Initialize with empty navigation shortcuts
       location: insertUser.location || null,
       profileImage: null,
       isActive: true,
@@ -350,6 +356,22 @@ export class MemStorage implements IStorage {
 
   async getUsersByRole(roles: string[]): Promise<User[]> {
     return Array.from(this.users.values()).filter(user => user.isActive && roles.includes(user.role));
+  }
+
+  async getUserNavPrefs(userId: number): Promise<{ navShortcuts: NavShortcutId[] }> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error(`User with id ${userId} not found`);
+    }
+    // Ensure we always return an array, even if navShortcuts is undefined or an object
+    const navShortcuts = Array.isArray(user.navShortcuts) ? user.navShortcuts : [];
+    return { navShortcuts };
+  }
+
+  async updateUserNavPrefs(userId: number, navShortcuts: NavShortcutId[]): Promise<{ navShortcuts: NavShortcutId[] }> {
+    const user = await this.updateUser(userId, { navShortcuts });
+    const resultShortcuts = Array.isArray(user.navShortcuts) ? user.navShortcuts : [];
+    return { navShortcuts: resultShortcuts };
   }
 
   async checkUserPermission(userId: number, permission: Permission): Promise<boolean> {
@@ -561,8 +583,9 @@ export class MemStorage implements IStorage {
       id, 
       status: insertVacancy.status || "vacant",
       notes: insertVacancy.notes || null,
-      previousTenantDuration: insertVacancy.previousTenantDuration || null,
       images: insertVacancy.images || null,
+      startDate: insertVacancy.startDate || null,
+      endDate: insertVacancy.endDate || null,
       createdAt: new Date()
     };
     this.vacancies.set(id, vacancy);
@@ -825,14 +848,6 @@ export class DatabaseStorage implements IStorage {
     await db.delete(userSessions).where(lt(userSessions.expiresAt, new Date()));
   }
 
-  async checkUserPermission(userId: number, permission: Permission): Promise<boolean> {
-    const user = await this.getUser(userId);
-    if (!user) return false;
-    
-    const userPermissions = getUserPermissions(user.role as UserRole, user.permissions as Permission[]);
-    return hasPermission(userPermissions, permission);
-  }
-
   // Task operations with role-based filtering
   async getTasks(userId?: number, userRole?: UserRole): Promise<Task[]> {
     if (!userRole) {
@@ -1088,6 +1103,37 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .orderBy(colabMessages.createdAt);
+  }
+
+  async getUserNavPrefs(userId: number): Promise<{ navShortcuts: NavShortcutId[] }> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error(`User with id ${userId} not found`);
+    }
+    // Ensure we always return an array, even if navShortcuts is undefined or an object
+    const navShortcuts = Array.isArray(user.navShortcuts) ? user.navShortcuts : [];
+    return { navShortcuts };
+  }
+
+  async updateUserNavPrefs(userId: number, navShortcuts: NavShortcutId[]): Promise<{ navShortcuts: NavShortcutId[] }> {
+    const [user] = await db
+      .update(users)
+      .set({ navShortcuts })
+      .where(eq(users.id, userId))
+      .returning();
+    if (!user) {
+      throw new Error(`User with id ${userId} not found`);
+    }
+    const resultShortcuts = Array.isArray(user.navShortcuts) ? user.navShortcuts : [];
+    return { navShortcuts: resultShortcuts };
+  }
+
+  async checkUserPermission(userId: number, permission: Permission): Promise<boolean> {
+    const user = await this.getUser(userId);
+    if (!user) return false;
+    
+    const userPermissions = getUserPermissions(user.role as UserRole, user.permissions as Permission[]);
+    return hasPermission(userPermissions, permission);
   }
 }
 

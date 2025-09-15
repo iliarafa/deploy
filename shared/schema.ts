@@ -3,6 +3,10 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Navigation shortcut options
+export const NavOption = z.enum(["today", "log", "colab", "tasks", "materials", "vacancies", "admin", "calendar"]);
+export type NavShortcutId = z.infer<typeof NavOption>;
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -14,6 +18,7 @@ export const users = pgTable("users", {
   lastName: text("last_name"),
   role: text("role").notNull().default("worker"),
   permissions: text("permissions").array().default([]),
+  navShortcuts: text("nav_shortcuts").array().default([]), // User's preferred navigation shortcuts
   location: text("location"), // Which construction site/location they work at
   profileImage: text("profile_image"),
   isActive: boolean("is_active").notNull().default(true),
@@ -194,6 +199,7 @@ export const updateUserSchema = createInsertSchema(users).pick({
   isActive: true,
   isApproved: true,
   mustChangePassword: true,
+  navShortcuts: true,
 }).extend({
   lastLogin: z.date().optional(),
   passwordLastChangedAt: z.date().optional(),
@@ -212,6 +218,11 @@ export const updateProfileSchema = createInsertSchema(users).pick({
   phone: z.string().optional().nullable(),
   birthDate: z.date().optional().nullable(),
 }).partial();
+
+// Navigation preferences schema  
+export const updateNavPrefsSchema = z.object({
+  navShortcuts: z.array(NavOption).max(4).optional()
+});
 
 export const reviewRegistrationRequestSchema = z.object({
   status: z.enum(["approved", "rejected"]),
@@ -286,3 +297,4 @@ export type InsertVacancy = z.infer<typeof insertVacancySchema>;
 export type ColabMessage = typeof colabMessages.$inferSelect;
 export type InsertColabMessage = z.infer<typeof insertColabMessageSchema>;
 export type ChangePassword = z.infer<typeof changePasswordSchema>;
+export type UpdateNavPrefs = z.infer<typeof updateNavPrefsSchema>;

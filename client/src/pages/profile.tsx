@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
@@ -16,9 +17,11 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { User, Mail, Phone, Calendar, Save } from "lucide-react";
+import { User, Mail, Phone, Calendar, Save, Navigation, Settings } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
-import { updateProfileSchema, type UpdateProfile } from "@shared/schema";
+import { updateProfileSchema, type UpdateProfile, updateNavPrefsSchema, type UpdateNavPrefs, type NavShortcutId } from "@shared/schema";
+import { type UserRole } from "@shared/roles";
+import { NAV_OPTIONS, getAllowedShortcuts, DEFAULT_NAV_PREFS } from "@/lib/nav";
 import Header from "@/components/layout/header";
 import MobileNav from "@/components/layout/mobile-nav";
 import PasswordChangeReminder from "@/components/notifications/password-change-reminder";
@@ -26,6 +29,18 @@ import PasswordChangeReminder from "@/components/notifications/password-change-r
 export default function Profile() {
   const { user, setUser } = useAuth();
   const { toast } = useToast();
+  const [selectedShortcuts, setSelectedShortcuts] = useState<NavShortcutId[]>([]);
+
+  // Fetch user navigation preferences
+  const { data: navPrefs, isLoading: navPrefsLoading } = useQuery({
+    queryKey: ["/api/me/nav-preferences"],
+    enabled: !!user,
+    onSuccess: (data: { navShortcuts: NavShortcutId[] }) => {
+      // Defensive coding: ensure navShortcuts is always an array
+      const shortcuts = Array.isArray(data?.navShortcuts) ? data.navShortcuts : [];
+      setSelectedShortcuts(shortcuts);
+    }
+  });
 
   const form = useForm<UpdateProfile>({
     resolver: zodResolver(updateProfileSchema),
@@ -75,6 +90,49 @@ export default function Profile() {
 
   const onSubmit = (data: UpdateProfile) => {
     updateProfileMutation.mutate(data);
+  };
+
+  // Navigation preferences mutation
+  const updateNavPrefsMutation = useMutation({
+    mutationFn: async (navShortcuts: NavShortcutId[]) => {
+      const response = await apiRequest('PATCH', '/api/me/nav-preferences', { navShortcuts });
+      return await response.json();
+    },
+    onSuccess: (data: { navShortcuts: NavShortcutId[] }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/me/nav-preferences"] });
+      toast({
+        title: "Navigation Updated",
+        description: "Your navigation shortcuts have been saved successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update navigation preferences",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleShortcutToggle = (shortcutId: NavShortcutId, checked: boolean) => {
+    if (checked && selectedShortcuts.length >= 4) {
+      toast({
+        title: "Maximum Reached",
+        description: "You can only select up to 4 navigation shortcuts.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newShortcuts = checked 
+      ? [...selectedShortcuts, shortcutId]
+      : selectedShortcuts.filter(id => id !== shortcutId);
+    
+    setSelectedShortcuts(newShortcuts);
+  };
+
+  const saveNavigationPreferences = () => {
+    updateNavPrefsMutation.mutate(selectedShortcuts);
   };
 
   if (!user) {
@@ -249,6 +307,97 @@ export default function Profile() {
                   </div>
                 </form>
               </Form>
+            </CardContent>
+          </Card>
+
+          {/* Navigation Preferences Card */}
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-xl flex items-center space-x-2">
+                <Navigation className="w-5 h-5" />
+                <span>Bottom Navigation Shortcuts</span>
+              </CardTitle>
+              <CardDescription>
+                Customize which shortcuts appear in your mobile navigation bar. You can select up to 4 shortcuts. "Today" is always visible.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {navPrefsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Selection Counter */}
+                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <span className="text-sm font-medium">Selected shortcuts:</span>
+                    <span className="text-sm font-bold" data-testid="text-shortcut-count">
+                      {selectedShortcuts.length}/4
+                    </span>
+                  </div>
+
+                  {/* Available Shortcuts */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {getAllowedShortcuts(user.role as UserRole)
+                      .filter(shortcutId => shortcutId !== "today") // Exclude "today" as it's always visible
+                      .map((shortcutId) => {
+                        const option = NAV_OPTIONS[shortcutId];
+                        const isSelected = selectedShortcuts.includes(shortcutId);
+                        const IconComponent = option.icon;
+
+                        return (
+                          <div
+                            key={shortcutId}
+                            className={`flex items-center space-x-3 p-3 border rounded-lg transition-colors ${
+                              isSelected 
+                                ? "border-primary bg-primary/5 dark:bg-primary/10" 
+                                : "border-gray-200 dark:border-gray-700"
+                            }`}
+                          >
+                            <Checkbox
+                              id={`shortcut-${shortcutId}`}
+                              checked={isSelected}
+                              onCheckedChange={(checked) => handleShortcutToggle(shortcutId, !!checked)}
+                              disabled={!isSelected && selectedShortcuts.length >= 4}
+                              data-testid={`checkbox-${shortcutId}`}
+                            />
+                            <div className="flex items-center space-x-2 flex-1">
+                              <IconComponent className="w-4 h-4" />
+                              <label 
+                                htmlFor={`shortcut-${shortcutId}`}
+                                className="text-sm font-medium cursor-pointer"
+                              >
+                                {option.label}
+                              </label>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+
+                  {/* Save Button */}
+                  <div className="flex justify-end pt-4">
+                    <Button 
+                      onClick={saveNavigationPreferences}
+                      disabled={updateNavPrefsMutation.isPending}
+                      data-testid="button-save-navigation"
+                      className="flex items-center space-x-2"
+                    >
+                      {updateNavPrefsMutation.isPending ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <span>Saving...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Settings className="w-4 h-4" />
+                          <span>Save Navigation</span>
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 

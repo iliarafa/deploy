@@ -1,10 +1,19 @@
 import { Link, useLocation } from "wouter";
-import { Calendar, CheckSquare, Package, Shield, FileText, MessageSquare, Home, Clock } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
+import { useQuery } from "@tanstack/react-query";
+import { NAV_OPTIONS, getVisibleShortcuts } from "@/lib/nav";
+import { type UserRole } from "@shared/roles";
+import { type NavShortcutId } from "@shared/schema";
 
 export default function MobileNav() {
   const [location] = useLocation();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
+
+  // Fetch user navigation preferences
+  const { data: navPrefs, isLoading: navPrefsLoading } = useQuery({
+    queryKey: ["/api/me/nav-preferences"],
+    enabled: !authLoading && !!user,
+  });
 
   const isActive = (path: string) => {
     if (path === "/" && location === "/") return true;
@@ -12,85 +21,68 @@ export default function MobileNav() {
     return false;
   };
 
-  // Check if user has full navigation access (admin and managers only)
-  const hasFullNavAccess = user && (user.role === 'admin' || user.role === 'project_manager');
+  // Show loading state or return early if no user
+  if (authLoading || navPrefsLoading || !user) {
+    return (
+      <nav className="md:hidden bg-white border-t border-gray-200 fixed bottom-0 left-0 right-0 z-50 w-full">
+        <div className="flex justify-around py-2 bg-white">
+          {/* Always show Today while loading */}
+          <Link 
+            href="/"
+            className={`flex flex-col items-center py-2 px-4 ${
+              isActive("/") ? "text-primary" : "text-gray-500"
+            }`} 
+            data-testid="nav-today"
+          >
+            <NAV_OPTIONS.today.icon className="w-5 h-5" />
+            <span className="text-xs mt-1">{NAV_OPTIONS.today.label}</span>
+          </Link>
+          {/* Loading placeholders */}
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="flex flex-col items-center py-2 px-4 opacity-30">
+              <div className="w-5 h-5 bg-gray-300 rounded animate-pulse" />
+              <div className="w-8 h-2 bg-gray-300 rounded mt-1 animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </nav>
+    );
+  }
+
+  // Get user's navigation shortcuts with defaults - defensive coding
+  const userShortcuts = Array.isArray(navPrefs?.navShortcuts) ? navPrefs.navShortcuts : [];
+  const visibleShortcuts = getVisibleShortcuts(userShortcuts, user.role as UserRole);
+
+  // Always start with "Today", then add user's visible shortcuts
+  const navigationItems: NavShortcutId[] = ["today", ...visibleShortcuts];
 
   return (
-    <nav className="md:hidden bg-white border-t border-gray-200 fixed bottom-0 left-0 right-0 z-50 w-full">
-      <div className="flex justify-around py-2 bg-white">
-        <Link href="/">
-          <a className={`flex flex-col items-center py-2 px-4 ${
-            isActive("/") ? "text-primary" : "text-gray-500"
-          }`}>
-            <Clock className="w-5 h-5" />
-            <span className="text-xs mt-1">Today</span>
-          </a>
-        </Link>
-        {/* Log tab for workers only */}
-        {user && user.role === 'worker' && (
-          <Link href="/log">
-            <a className={`flex flex-col items-center py-2 px-4 ${
-              isActive("/log") ? "text-primary" : "text-gray-500"
-            }`}>
-              <FileText className="w-5 h-5" />
-              <span className="text-xs mt-1">Log</span>
-            </a>
-          </Link>
-        )}
-        {/* Colab tab for workers and managers */}
-        {user && (user.role === 'worker' || user.role === 'project_manager' || user.role === 'admin') && (
-          <Link href="/colab">
-            <a 
+    <nav className="md:hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 fixed bottom-0 left-0 right-0 z-50 w-full">
+      <div className="flex justify-around py-2 bg-white dark:bg-gray-800">
+        {navigationItems.map((shortcutId) => {
+          const option = NAV_OPTIONS[shortcutId];
+          if (!option) return null;
+
+          const IconComponent = option.icon;
+          const testId = shortcutId === "today" ? "nav-today" : 
+                       shortcutId === "colab" ? "nav-colab" :
+                       shortcutId === "vacancies" ? "nav-vacancies" :
+                       `nav-${shortcutId}`;
+
+          return (
+            <Link 
+              key={shortcutId} 
+              href={option.path}
               className={`flex flex-col items-center py-2 px-4 ${
-                isActive("/colab") ? "text-primary" : "text-gray-500"
+                isActive(option.path) ? "text-primary" : "text-gray-500 dark:text-gray-400"
               }`}
-              data-testid="nav-colab"
+              data-testid={testId}
             >
-              <MessageSquare className="w-5 h-5" />
-              <span className="text-xs mt-1">Colab</span>
-            </a>
-          </Link>
-        )}
-        {hasFullNavAccess && (
-          <Link href="/tasks">
-            <a className={`flex flex-col items-center py-2 px-4 ${
-              isActive("/tasks") ? "text-primary" : "text-gray-500"
-            }`}>
-              <CheckSquare className="w-5 h-5" />
-              <span className="text-xs mt-1">Tasks</span>
-            </a>
-          </Link>
-        )}
-        {hasFullNavAccess && (
-          <Link href="/materials">
-            <a className={`flex flex-col items-center py-2 px-4 ${
-              isActive("/materials") ? "text-primary" : "text-gray-500"
-            }`}>
-              <Package className="w-5 h-5" />
-              <span className="text-xs mt-1">Materials</span>
-            </a>
-          </Link>
-        )}
-        {hasFullNavAccess && (
-          <Link href="/vacancies">
-            <a className={`flex flex-col items-center py-2 px-4 ${
-              isActive("/vacancies") ? "text-primary" : "text-gray-500"
-            }`} data-testid="nav-vacancies">
-              <Home className="w-5 h-5" />
-              <span className="text-xs mt-1">Vacancies</span>
-            </a>
-          </Link>
-        )}
-        {hasFullNavAccess && (
-          <Link href="/admin">
-            <a className={`flex flex-col items-center py-2 px-4 ${
-              isActive("/admin") ? "text-primary" : "text-gray-500"
-            }`}>
-              <Shield className="w-5 h-5" />
-              <span className="text-xs mt-1">Admin</span>
-            </a>
-          </Link>
-        )}
+              <IconComponent className="w-5 h-5" />
+              <span className="text-xs mt-1">{option.label}</span>
+            </Link>
+          );
+        })}
       </div>
     </nav>
   );
