@@ -40,6 +40,7 @@ import {
   changePasswordSchema,
   insertColabMessageSchema,
   insertVacancySchema,
+  insertIssueSchema,
   updateNavPrefsSchema
 } from "@shared/schema";
 import { z } from "zod";
@@ -1153,6 +1154,157 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Test email error:", error);
       res.status(500).json({ message: "Failed to send test email" });
+    }
+  });
+
+  // Issue routes
+  app.get("/api/issues", authenticate, enforcePasswordChange, async (req, res) => {
+    try {
+      const issues = await storage.getIssues();
+      res.json(issues);
+    } catch (error) {
+      console.error("Error fetching issues:", error);
+      res.status(500).json({ message: "Failed to fetch issues" });
+    }
+  });
+
+  app.get("/api/issues/:id", authenticate, enforcePasswordChange, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const issue = await storage.getIssue(id);
+      if (!issue) {
+        return res.status(404).json({ message: "Issue not found" });
+      }
+      res.json(issue);
+    } catch (error) {
+      console.error("Error fetching issue:", error);
+      res.status(500).json({ message: "Failed to fetch issue" });
+    }
+  });
+
+  app.post("/api/issues", authenticate, enforcePasswordChange, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+
+      const validatedData = insertIssueSchema.parse(req.body);
+      // Automatically set the reportedBy field to the current user
+      const issueData = { ...validatedData, reportedBy: userId };
+      const issue = await storage.createIssue(issueData);
+      
+      // Send real-time notification
+      try {
+        wsManager.broadcast({ type: "issue_created", issue });
+      } catch (notifError) {
+        console.log("Notification failed:", notifError);
+      }
+      
+      res.status(201).json(issue);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid issue data", errors: error.errors });
+      }
+      console.error("Error creating issue:", error);
+      res.status(500).json({ message: "Failed to create issue" });
+    }
+  });
+
+  app.put("/api/issues/:id", authenticate, enforcePasswordChange, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user?.id;
+      const userRole = req.user?.role;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+
+      // Check if issue exists first
+      const existingIssue = await storage.getIssue(id);
+      if (!existingIssue) {
+        return res.status(404).json({ message: "Issue not found" });
+      }
+
+      // Authorization: users can edit their own issues, admins/project managers can edit any
+      if (existingIssue.reportedBy !== userId && userRole !== 'admin' && userRole !== 'project_manager') {
+        return res.status(403).json({ message: "Not authorized to edit this issue" });
+      }
+
+      const validatedData = insertIssueSchema.partial().parse(req.body);
+      const issue = await storage.updateIssue(id, validatedData);
+      
+      // Send real-time notification
+      try {
+        wsManager.broadcast({ type: "issue_updated", issue });
+      } catch (notifError) {
+        console.log("Notification failed:", notifError);
+      }
+      
+      res.json(issue);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid issue data", errors: error.errors });
+      }
+      console.error("Error updating issue:", error);
+      res.status(500).json({ message: "Failed to update issue" });
+    }
+  });
+
+  app.delete("/api/issues/:id", authenticate, enforcePasswordChange, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user?.id;
+      const userRole = req.user?.role;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+
+      // Check if issue exists first
+      const existingIssue = await storage.getIssue(id);
+      if (!existingIssue) {
+        return res.status(404).json({ message: "Issue not found" });
+      }
+
+      // Authorization: users can delete their own issues, admins/project managers can delete any
+      if (existingIssue.reportedBy !== userId && userRole !== 'admin' && userRole !== 'project_manager') {
+        return res.status(403).json({ message: "Not authorized to delete this issue" });
+      }
+
+      await storage.deleteIssue(id);
+      
+      // Send real-time notification
+      try {
+        wsManager.broadcast({ type: "issue_deleted", issueId: id });
+      } catch (notifError) {
+        console.log("Notification failed:", notifError);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting issue:", error);
+      res.status(500).json({ message: "Failed to delete issue" });
+    }
+  });
+
+  app.get("/api/issues/user/:userId", authenticate, enforcePasswordChange, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const currentUserId = req.user?.id;
+      const userRole = req.user?.role;
+      
+      // Authorization: users can only see their own issues, admins/project managers can see any
+      if (userId !== currentUserId && userRole !== 'admin' && userRole !== 'project_manager') {
+        return res.status(403).json({ message: "Not authorized to view these issues" });
+      }
+
+      const issues = await storage.getIssuesByUser(userId);
+      res.json(issues);
+    } catch (error) {
+      console.error("Error fetching user issues:", error);
+      res.status(500).json({ message: "Failed to fetch user issues" });
     }
   });
 

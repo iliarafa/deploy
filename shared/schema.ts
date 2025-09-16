@@ -114,6 +114,25 @@ export const colabMessages = pgTable("colab_messages", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const issues = pgTable("issues", {
+  id: serial("id").primaryKey(),
+  description: text("description").notNull(),
+  urgency: text("urgency").notNull().default("normal"), // emergency, high, normal
+  category: text("category").notNull().default("other"), // maintenance, tenant_relations, security, administrative, utilities, other
+  property: text("property"),
+  apartmentNumber: text("apartment_number"),
+  affectedParties: text("affected_parties").array(), // tenants, staff, contractors, public
+  preferredTimeline: text("preferred_timeline").default("no_timeline"), // asap, week, month, no_timeline
+  contactMethod: text("contact_method").default("email"), // email, phone, app
+  attachments: text("attachments").array(), // file paths for uploaded images/documents
+  status: text("status").notNull().default("pending"), // pending, in_progress, resolved, cancelled
+  reportedBy: integer("reported_by").notNull(),
+  assignedTo: text("assigned_to"),
+  createdAt: timestamp("created_at").defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
+  notes: text("notes"), // internal notes for resolution
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   approvedByUser: one(users, {
@@ -123,6 +142,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   sessions: many(userSessions),
   colabMessages: many(colabMessages),
   materialRequests: many(materialRequests),
+  reportedIssues: many(issues),
 }));
 
 export const userRegistrationRequestsRelations = relations(userRegistrationRequests, ({ one }) => ({
@@ -160,6 +180,13 @@ export const colabMessagesRelations = relations(colabMessages, ({ one }) => ({
 export const materialRequestsRelations = relations(materialRequests, ({ one }) => ({
   user: one(users, {
     fields: [materialRequests.userId],
+    references: [users.id],
+  }),
+}));
+
+export const issuesRelations = relations(issues, ({ one }) => ({
+  reportedByUser: one(users, {
+    fields: [issues.reportedBy],
     references: [users.id],
   }),
 }));
@@ -271,6 +298,23 @@ export const insertColabMessageSchema = createInsertSchema(colabMessages).omit({
   createdAt: true,
 });
 
+export const insertIssueSchema = createInsertSchema(issues)
+  .omit({
+    id: true,
+    createdAt: true,
+    resolvedAt: true,
+  })
+  .extend({
+    description: z.string().min(10, "Please provide a detailed description (at least 10 characters)"),
+    urgency: z.enum(["emergency", "high", "normal"]),
+    category: z.enum(["maintenance", "tenant_relations", "security", "administrative", "utilities", "other"]),
+    property: z.string().optional(),
+    apartmentNumber: z.string().optional(),
+    affectedParties: z.array(z.enum(["tenants", "staff", "contractors", "public"])).optional(),
+    preferredTimeline: z.enum(["asap", "week", "month", "no_timeline"]).optional(),
+    contactMethod: z.enum(["email", "phone", "app"]).optional(),
+  });
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpdateUser = z.infer<typeof updateUserSchema>;
@@ -290,5 +334,7 @@ export type Vacancy = typeof vacancies.$inferSelect;
 export type InsertVacancy = z.infer<typeof insertVacancySchema>;
 export type ColabMessage = typeof colabMessages.$inferSelect;
 export type InsertColabMessage = z.infer<typeof insertColabMessageSchema>;
+export type Issue = typeof issues.$inferSelect;
+export type InsertIssue = z.infer<typeof insertIssueSchema>;
 export type ChangePassword = z.infer<typeof changePasswordSchema>;
 export type UpdateNavPrefs = z.infer<typeof updateNavPrefsSchema>;

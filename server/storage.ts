@@ -7,6 +7,7 @@ import {
   communications,
   vacancies,
   colabMessages,
+  issues,
   type User, 
   type InsertUser,
   type UpdateUser,
@@ -25,6 +26,8 @@ import {
   type InsertVacancy,
   type ColabMessage,
   type InsertColabMessage,
+  type Issue,
+  type InsertIssue,
   type NavShortcutId
 } from "@shared/schema";
 import { type UserRole, type Permission, hasPermission, getUserPermissions } from "@shared/roles";
@@ -121,6 +124,15 @@ export interface IStorage {
   deleteColabMessage(id: number, userId: number, userRole: UserRole): Promise<void>;
   searchColabMessages(query: string): Promise<ColabMessage[]>;
   
+  // Issue operations
+  getIssues(): Promise<Issue[]>;
+  getIssue(id: number): Promise<Issue | undefined>;
+  createIssue(issue: InsertIssue): Promise<Issue>;
+  updateIssue(id: number, updates: Partial<InsertIssue>): Promise<Issue>;
+  deleteIssue(id: number): Promise<void>;
+  getIssuesByUser(userId: number): Promise<Issue[]>;
+  getIssuesByStatus(status: string): Promise<Issue[]>;
+  
   // Navigation preferences
   getUserNavPrefs(userId: number): Promise<{ navShortcuts: NavShortcutId[] }>;
   updateUserNavPrefs(userId: number, navShortcuts: NavShortcutId[]): Promise<{ navShortcuts: NavShortcutId[] }>;
@@ -138,6 +150,7 @@ export class MemStorage implements IStorage {
   private communications: Map<number, Communication>;
   private vacancies: Map<number, Vacancy>;
   private colabMessages: Map<number, ColabMessage>;
+  private issues: Map<number, Issue>;
   private currentUserId: number;
   private currentRequestId: number;
   private currentTaskId: number;
@@ -145,6 +158,7 @@ export class MemStorage implements IStorage {
   private currentCommunicationId: number;
   private currentVacancyId: number;
   private currentColabMessageId: number;
+  private currentIssueId: number;
 
   constructor() {
     this.users = new Map();
@@ -155,6 +169,7 @@ export class MemStorage implements IStorage {
     this.communications = new Map();
     this.vacancies = new Map();
     this.colabMessages = new Map();
+    this.issues = new Map();
     this.currentUserId = 1;
     this.currentRequestId = 1;
     this.currentTaskId = 1;
@@ -162,6 +177,7 @@ export class MemStorage implements IStorage {
     this.currentCommunicationId = 1;
     this.currentVacancyId = 1;
     this.currentColabMessageId = 1;
+    this.currentIssueId = 1;
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -678,6 +694,61 @@ export class MemStorage implements IStorage {
       message.username.toLowerCase().includes(lowerQuery)
     );
   }
+
+  // Issue operations
+  async getIssues(): Promise<Issue[]> {
+    return Array.from(this.issues.values());
+  }
+
+  async getIssue(id: number): Promise<Issue | undefined> {
+    return this.issues.get(id);
+  }
+
+  async createIssue(insertIssue: InsertIssue): Promise<Issue> {
+    const id = this.currentIssueId++;
+    const issue: Issue = {
+      id,
+      description: insertIssue.description,
+      urgency: insertIssue.urgency || "normal",
+      category: insertIssue.category || "other",
+      property: insertIssue.property || null,
+      apartmentNumber: insertIssue.apartmentNumber || null,
+      affectedParties: insertIssue.affectedParties || null,
+      preferredTimeline: insertIssue.preferredTimeline || "no_timeline",
+      contactMethod: insertIssue.contactMethod || "email",
+      attachments: insertIssue.attachments || null,
+      status: insertIssue.status || "pending",
+      reportedBy: insertIssue.reportedBy,
+      assignedTo: insertIssue.assignedTo || null,
+      createdAt: new Date(),
+      resolvedAt: null,
+      notes: insertIssue.notes || null,
+    };
+    this.issues.set(id, issue);
+    return issue;
+  }
+
+  async updateIssue(id: number, updates: Partial<InsertIssue>): Promise<Issue> {
+    const existingIssue = this.issues.get(id);
+    if (!existingIssue) {
+      throw new Error(`Issue with id ${id} not found`);
+    }
+    const updatedIssue = { ...existingIssue, ...updates };
+    this.issues.set(id, updatedIssue);
+    return updatedIssue;
+  }
+
+  async deleteIssue(id: number): Promise<void> {
+    this.issues.delete(id);
+  }
+
+  async getIssuesByUser(userId: number): Promise<Issue[]> {
+    return Array.from(this.issues.values()).filter(issue => issue.reportedBy === userId);
+  }
+
+  async getIssuesByStatus(status: string): Promise<Issue[]> {
+    return Array.from(this.issues.values()).filter(issue => issue.status === status);
+  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1139,6 +1210,45 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .orderBy(colabMessages.createdAt);
+  }
+
+  // Issue operations
+  async getIssues(): Promise<Issue[]> {
+    return await db.select().from(issues).orderBy(issues.createdAt);
+  }
+
+  async getIssue(id: number): Promise<Issue | undefined> {
+    const [issue] = await db.select().from(issues).where(eq(issues.id, id));
+    return issue || undefined;
+  }
+
+  async createIssue(insertIssue: InsertIssue): Promise<Issue> {
+    const [issue] = await db
+      .insert(issues)
+      .values(insertIssue)
+      .returning();
+    return issue;
+  }
+
+  async updateIssue(id: number, updates: Partial<InsertIssue>): Promise<Issue> {
+    const [issue] = await db
+      .update(issues)
+      .set(updates)
+      .where(eq(issues.id, id))
+      .returning();
+    return issue;
+  }
+
+  async deleteIssue(id: number): Promise<void> {
+    await db.delete(issues).where(eq(issues.id, id));
+  }
+
+  async getIssuesByUser(userId: number): Promise<Issue[]> {
+    return await db.select().from(issues).where(eq(issues.reportedBy, userId)).orderBy(issues.createdAt);
+  }
+
+  async getIssuesByStatus(status: string): Promise<Issue[]> {
+    return await db.select().from(issues).where(eq(issues.status, status)).orderBy(issues.createdAt);
   }
 
   async getUserNavPrefs(userId: number): Promise<{ navShortcuts: NavShortcutId[] }> {
