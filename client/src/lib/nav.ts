@@ -1,4 +1,4 @@
-import { Calendar, CheckSquare, Package, Shield, FileText, MessageSquare, Home, Clock } from "lucide-react";
+import { Calendar, CheckSquare, Package, Shield, FileText, MessageSquare, Home, Clock, AlertTriangle } from "lucide-react";
 import { type NavShortcutId } from "@shared/schema";
 import { type UserRole } from "@shared/roles";
 
@@ -10,6 +10,7 @@ export const NAV_OPTIONS = {
   tasks: { id: "tasks" as const, label: "Tasks", icon: CheckSquare, path: "/tasks" },
   materials: { id: "materials" as const, label: "Materials", icon: Package, path: "/materials" },
   vacancies: { id: "vacancies" as const, label: "Vacancies", icon: Home, path: "/vacancies" },
+  issues: { id: "issues" as const, label: "Issues", icon: AlertTriangle, path: "/issues" },
   admin: { id: "admin" as const, label: "Admin", icon: Shield, path: "/admin" },
   calendar: { id: "calendar" as const, label: "Calendar", icon: Calendar, path: "/calendar" }
 } as const;
@@ -22,18 +23,19 @@ export const NAV_RULES: Record<NavShortcutId, { allowedRoles: UserRole[]; requir
   tasks: { allowedRoles: ["project_manager", "admin", "supervisor", "inspector", "client"], requiresAuth: true },
   materials: { allowedRoles: ["worker", "project_manager", "admin", "supervisor", "inspector"], requiresAuth: true },
   vacancies: { allowedRoles: ["project_manager", "admin"], requiresAuth: true },
+  issues: { allowedRoles: ["worker", "project_manager", "admin", "supervisor", "inspector", "client"], requiresAuth: true },
   admin: { allowedRoles: ["admin"], requiresAuth: true },
   calendar: { allowedRoles: ["worker", "project_manager", "admin", "supervisor", "inspector", "client"], requiresAuth: true }
 };
 
 // Default navigation preferences by role
 export const DEFAULT_NAV_PREFS: Record<UserRole, NavShortcutId[]> = {
-  worker: ["log", "colab", "calendar", "materials"],
-  project_manager: ["tasks", "materials", "vacancies", "colab"],
-  admin: ["tasks", "materials", "vacancies", "admin"],
-  supervisor: ["tasks", "materials", "colab", "calendar"],
-  inspector: ["tasks", "materials", "colab", "calendar"],
-  client: ["tasks", "calendar", "colab", "materials"]
+  worker: ["log", "issues", "colab", "calendar"],
+  project_manager: ["tasks", "materials", "issues", "colab"],
+  admin: ["tasks", "materials", "issues", "admin"],
+  supervisor: ["tasks", "materials", "issues", "calendar"],
+  inspector: ["tasks", "materials", "issues", "calendar"],
+  client: ["tasks", "calendar", "issues", "colab"]
 };
 
 // Helper function to get allowed shortcuts for a user role

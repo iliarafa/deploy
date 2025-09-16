@@ -8,19 +8,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { AlertCircle, Clock, Phone, Mail, Smartphone } from "lucide-react";
+import { insertIssueSchema } from "@shared/schema";
 
-// Form validation schema
-const issueFormSchema = z.object({
+// Extend the shared schema with additional validation rules
+const issueFormSchema = insertIssueSchema.extend({
   description: z.string().min(10, "Please provide a detailed description (at least 10 characters)"),
-  urgency: z.enum(["emergency", "high", "normal"]),
-  category: z.enum(["maintenance", "tenant_relations", "security", "administrative", "utilities", "other"]),
-  property: z.string().optional(),
-  apartmentNumber: z.string().optional(),
-  affectedParties: z.array(z.enum(["tenants", "staff", "contractors", "public"])).optional(),
-  preferredTimeline: z.enum(["asap", "week", "month", "no_timeline"]).optional(),
-  contactMethod: z.enum(["email", "phone", "app"]).optional(),
-});
+}).omit({ reportedBy: true }); // reportedBy is set automatically
 
 type IssueFormData = z.infer<typeof issueFormSchema>;
 

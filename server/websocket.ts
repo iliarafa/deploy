@@ -135,6 +135,27 @@ class WebSocketManager {
       data: { messageId }
     });
   }
+
+  notifyIssueCreated(issue: any) {
+    this.broadcast({
+      type: 'issue_created',
+      issue: issue
+    });
+  }
+
+  notifyIssueUpdated(issue: any) {
+    this.broadcast({
+      type: 'issue_updated',
+      issue: issue
+    });
+  }
+
+  notifyIssueDeleted(issueId: number) {
+    this.broadcast({
+      type: 'issue_deleted',
+      issueId: issueId
+    });
+  }
 }
 
 export const wsManager = new WebSocketManager();

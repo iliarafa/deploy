@@ -60,12 +60,12 @@ import { type NavShortcutId } from "@shared/schema";
 // Role-based navigation shortcuts configuration
 function getShortcutsForRole(role: UserRole): NavShortcutId[] {
   const roleShortcuts: Record<UserRole, NavShortcutId[]> = {
-    worker: ["log", "colab", "calendar", "materials"],
-    project_manager: ["tasks", "materials", "vacancies", "colab", "calendar"],
-    admin: ["tasks", "materials", "vacancies", "admin", "calendar"],
-    supervisor: ["tasks", "materials", "colab", "calendar"],
-    inspector: ["tasks", "materials", "colab", "calendar"],
-    client: ["tasks", "calendar", "colab"]
+    worker: ["log", "issues", "colab", "calendar"],
+    project_manager: ["tasks", "materials", "issues", "colab"],
+    admin: ["tasks", "materials", "issues", "admin"],
+    supervisor: ["tasks", "materials", "issues", "calendar"],
+    inspector: ["tasks", "materials", "issues", "calendar"],
+    client: ["tasks", "calendar", "issues", "colab"]
   };
   
   return roleShortcuts[role] || [];
@@ -1196,7 +1196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Send real-time notification
       try {
-        wsManager.broadcast({ type: "issue_created", issue });
+        wsManager.notifyIssueCreated(issue);
       } catch (notifError) {
         console.log("Notification failed:", notifError);
       }
@@ -1237,7 +1237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Send real-time notification
       try {
-        wsManager.broadcast({ type: "issue_updated", issue });
+        wsManager.notifyIssueUpdated(issue);
       } catch (notifError) {
         console.log("Notification failed:", notifError);
       }
@@ -1277,7 +1277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Send real-time notification
       try {
-        wsManager.broadcast({ type: "issue_deleted", issueId: id });
+        wsManager.notifyIssueDeleted(id);
       } catch (notifError) {
         console.log("Notification failed:", notifError);
       }

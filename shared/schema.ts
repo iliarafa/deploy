@@ -4,7 +4,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Navigation shortcut options
-export const NavOption = z.enum(["today", "log", "colab", "tasks", "materials", "vacancies", "admin", "calendar"]);
+export const NavOption = z.enum(["today", "log", "colab", "tasks", "materials", "vacancies", "issues", "admin", "calendar"]);
 export type NavShortcutId = z.infer<typeof NavOption>;
 
 export const users = pgTable("users", {
