@@ -44,9 +44,9 @@ export function IssueForm({ onSubmit, isLoading = false }: IssueFormProps) {
   };
 
   const urgencyOptions = [
-    { value: "emergency", label: "🔴 emergency", description: "immediate safety/security concerns" },
-    { value: "high", label: "🟡 high", description: "affects daily operations" },
-    { value: "normal", label: "🟢 normal", description: "routine maintenance/non-urgent" },
+    { value: "emergency", label: "emergency", color: "text-red-600 font-bold" },
+    { value: "high", label: "high", color: "text-orange-500 font-bold" },
+    { value: "normal", label: "normal", color: "text-green-600 font-bold" },
   ];
 
   const categoryOptions = [
@@ -110,10 +110,7 @@ export function IssueForm({ onSubmit, isLoading = false }: IssueFormProps) {
               <SelectContent>
                 {urgencyOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
-                    <div className="flex flex-col items-start text-left text-xs sm:text-sm">
-                      <span className="whitespace-nowrap">{option.label}</span>
-                      <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">{option.description}</span>
-                    </div>
+                    <span className={`${option.color} capitalize`}>{option.label}</span>
                   </SelectItem>
                 ))}
               </SelectContent>
