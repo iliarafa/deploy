@@ -101,7 +101,7 @@ export function IssueForm({ onSubmit, isLoading = false }: IssueFormProps) {
             <Label htmlFor="category">Category *</Label>
             <Select onValueChange={(value) => form.setValue("category", value as any)} defaultValue="idle_elevator">
               <SelectTrigger data-testid="select-category">
-                <SelectValue placeholder="Select category" />
+                <SelectValue placeholder="Choose Category" />
               </SelectTrigger>
               <SelectContent>
                 {categoryOptions.map((option) => (
