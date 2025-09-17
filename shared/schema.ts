@@ -120,7 +120,6 @@ export const issues = pgTable("issues", {
   urgency: text("urgency").notNull().default("normal"), // emergency, high, normal
   category: text("category").notNull().default("idle_elevator"), // idle_elevator, no_heat_hot_water, no_electricity
   property: text("property"),
-  contactMethod: text("contact_method").default("email"), // email, phone, app
   attachments: text("attachments").array(), // file paths for uploaded images/documents
   status: text("status").notNull().default("pending"), // pending, in_progress, resolved, cancelled
   reportedBy: integer("reported_by").notNull(),

@@ -8,7 +8,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Phone, Mail, Smartphone } from "lucide-react";
 import { insertIssueSchema } from "@shared/schema";
 
 // Extend the shared schema with additional validation rules
@@ -31,7 +30,6 @@ export function IssueForm({ onSubmit, isLoading = false }: IssueFormProps) {
       urgency: "normal",
       category: "idle_elevator",
       property: "",
-      contactMethod: "email",
     },
   });
 
@@ -51,11 +49,6 @@ export function IssueForm({ onSubmit, isLoading = false }: IssueFormProps) {
     { value: "no_electricity", label: "No electricity" },
   ];
 
-  const contactOptions = [
-    { value: "email", label: "Email notifications", icon: Mail },
-    { value: "phone", label: "Phone call", icon: Phone },
-    { value: "app", label: "In-app notifications", icon: Smartphone },
-  ];
 
   return (
     <Card className="w-full max-w-lg mx-auto">
@@ -133,25 +126,6 @@ export function IssueForm({ onSubmit, isLoading = false }: IssueFormProps) {
 
 
 
-          {/* Contact Method */}
-          <div className="space-y-2">
-            <Label htmlFor="contact">Preferred Contact Method for Updates</Label>
-            <Select onValueChange={(value) => form.setValue("contactMethod", value as any)} defaultValue="email">
-              <SelectTrigger data-testid="select-contact-method">
-                <SelectValue placeholder="Select contact method" />
-              </SelectTrigger>
-              <SelectContent>
-                {contactOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    <div className="flex items-center gap-2">
-                      <option.icon className="h-4 w-4" />
-                      {option.label}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
 
           {/* Submit Button */}
           <Button 
