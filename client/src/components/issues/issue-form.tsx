@@ -44,9 +44,9 @@ export function IssueForm({ onSubmit, isLoading = false }: IssueFormProps) {
   };
 
   const urgencyOptions = [
-    { value: "emergency", label: "🔴 Emergency", description: "Immediate safety/security concerns" },
-    { value: "high", label: "🟡 High", description: "Affects daily operations" },
-    { value: "normal", label: "🟢 Normal", description: "Routine maintenance/non-urgent" },
+    { value: "emergency", label: "🔴 emergency", description: "immediate safety/security concerns" },
+    { value: "high", label: "🟡 high", description: "affects daily operations" },
+    { value: "normal", label: "🟢 normal", description: "routine maintenance/non-urgent" },
   ];
 
   const categoryOptions = [
@@ -104,15 +104,15 @@ export function IssueForm({ onSubmit, isLoading = false }: IssueFormProps) {
           <div className="space-y-2">
             <Label htmlFor="urgency">Urgency Level *</Label>
             <Select onValueChange={(value) => form.setValue("urgency", value as any)} defaultValue="normal">
-              <SelectTrigger data-testid="select-urgency" className="text-left">
+              <SelectTrigger data-testid="select-urgency" className="text-left text-sm w-full overflow-visible whitespace-nowrap">
                 <SelectValue placeholder="Select urgency level" />
               </SelectTrigger>
               <SelectContent>
                 {urgencyOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
-                    <div className="flex flex-col items-start text-left">
-                      <span>{option.label}</span>
-                      <span className="text-xs text-muted-foreground">{option.description}</span>
+                    <div className="flex flex-col items-start text-left text-sm">
+                      <span className="whitespace-nowrap">{option.label}</span>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">{option.description}</span>
                     </div>
                   </SelectItem>
                 ))}
