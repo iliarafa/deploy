@@ -37,7 +37,7 @@ export default function IssuesPage() {
       <div className="max-w-2xl mx-auto">
         <div className="mb-6">
           <h1 className="font-bold text-[26px]" data-testid="text-page-title">Report an Issue</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-[12px]">
             Submit a property management issue that needs attention
           </p>
         </div>
