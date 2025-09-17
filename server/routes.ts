@@ -1289,6 +1289,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin route: Get all issues (admin and project managers only)
+  app.get("/api/admin/issues", authenticate, enforcePasswordChange, async (req, res) => {
+    try {
+      const userRole = req.user?.role;
+      
+      // Check if user has admin or project manager role
+      if (!["admin", "project_manager"].includes(userRole)) {
+        return res.status(403).json({ message: "Access denied. Admin or project manager role required." });
+      }
+      
+      const issues = await storage.getIssues();
+      res.json(issues);
+    } catch (error) {
+      console.error("Error fetching all issues:", error);
+      res.status(500).json({ message: "Failed to fetch issues" });
+    }
+  });
+
+  app.patch("/api/issues/:id", authenticate, enforcePasswordChange, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userRole = req.user?.role;
+      
+      // Only admins and project managers can update issue status
+      if (!["admin", "project_manager"].includes(userRole)) {
+        return res.status(403).json({ message: "Access denied. Admin or project manager role required." });
+      }
+
+      const { status, notes, assignedTo } = req.body;
+      const issue = await storage.updateIssue(id, { status, notes, assignedTo });
+      
+      if (!issue) {
+        return res.status(404).json({ message: "Issue not found" });
+      }
+
+      // Send WebSocket notification
+      wsManager.notifyIssueUpdated(issue);
+      
+      res.json(issue);
+    } catch (error) {
+      console.error("Error updating issue:", error);
+      res.status(500).json({ message: "Failed to update issue" });
+    }
+  });
+
   app.get("/api/issues/user/:userId", authenticate, enforcePasswordChange, async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
