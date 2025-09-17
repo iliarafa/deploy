@@ -99,7 +99,7 @@ export function IssueForm({ onSubmit, isLoading = false }: IssueFormProps) {
           {/* Category */}
           <div className="space-y-2">
             <Label htmlFor="category">Category *</Label>
-            <Select onValueChange={(value) => form.setValue("category", value as any)} defaultValue="idle_elevator">
+            <Select onValueChange={(value) => form.setValue("category", value as any)}>
               <SelectTrigger data-testid="select-category">
                 <SelectValue placeholder="Choose Category" />
               </SelectTrigger>
