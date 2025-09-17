@@ -26,10 +26,8 @@ import AdminIssues from "@/pages/admin-issues";
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
   
-  // Initialize notifications system only when authenticated
-  if (isAuthenticated) {
-    useNotifications();
-  }
+  // Initialize notifications system (with auth check inside hook)
+  useNotifications();
   
   // Show loading state while checking authentication
   if (isLoading) {

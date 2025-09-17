@@ -6,10 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { AlertCircle, Clock, Phone, Mail, Smartphone } from "lucide-react";
+import { Phone, Mail, Smartphone } from "lucide-react";
 import { insertIssueSchema } from "@shared/schema";
 
 // Extend the shared schema with additional validation rules
@@ -30,11 +29,8 @@ export function IssueForm({ onSubmit, isLoading = false }: IssueFormProps) {
     defaultValues: {
       description: "",
       urgency: "normal",
-      category: "other",
+      category: "idle_elevator",
       property: "",
-      apartmentNumber: "",
-      affectedParties: [],
-      preferredTimeline: "no_timeline",
       contactMethod: "email",
     },
   });
@@ -50,19 +46,9 @@ export function IssueForm({ onSubmit, isLoading = false }: IssueFormProps) {
   ];
 
   const categoryOptions = [
-    { value: "maintenance", label: "Maintenance & Repairs" },
-    { value: "tenant_relations", label: "Tenant Relations" },
-    { value: "security", label: "Security & Safety" },
-    { value: "administrative", label: "Administrative" },
-    { value: "utilities", label: "Utilities (water, electric, etc.)" },
-    { value: "other", label: "Other" },
-  ];
-
-  const timelineOptions = [
-    { value: "asap", label: "ASAP (same day)" },
-    { value: "week", label: "Within 1 week" },
-    { value: "month", label: "Within 1 month" },
-    { value: "no_timeline", label: "No specific timeline" },
+    { value: "idle_elevator", label: "Idle Elevator" },
+    { value: "no_heat_hot_water", label: "No Heat/Hot Water" },
+    { value: "no_electricity", label: "No electricity" },
   ];
 
   const contactOptions = [
@@ -71,20 +57,13 @@ export function IssueForm({ onSubmit, isLoading = false }: IssueFormProps) {
     { value: "app", label: "In-app notifications", icon: Smartphone },
   ];
 
-  const affectedPartiesOptions = [
-    { value: "tenants", label: "Tenants" },
-    { value: "staff", label: "Staff" },
-    { value: "contractors", label: "Contractors" },
-    { value: "public", label: "General Public" },
-  ];
-
   return (
-    <Card className="w-full max-w-2xl mx-auto">
+    <Card className="w-full max-w-lg mx-auto">
       <CardHeader>
         
       </CardHeader>
       <CardContent>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
           {/* Issue Description */}
           <div className="space-y-2">
             <Label htmlFor="description">Issue Description *</Label>
@@ -120,7 +99,7 @@ export function IssueForm({ onSubmit, isLoading = false }: IssueFormProps) {
           {/* Category */}
           <div className="space-y-2">
             <Label htmlFor="category">Category *</Label>
-            <Select onValueChange={(value) => form.setValue("category", value as any)} defaultValue="other">
+            <Select onValueChange={(value) => form.setValue("category", value as any)} defaultValue="idle_elevator">
               <SelectTrigger data-testid="select-category">
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
@@ -134,83 +113,25 @@ export function IssueForm({ onSubmit, isLoading = false }: IssueFormProps) {
             </Select>
           </div>
 
-          {/* Property and Apartment */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="property">Property Address</Label>
-              <Select onValueChange={(value) => form.setValue("property", value)}>
-                <SelectTrigger data-testid="select-property">
-                  <SelectValue placeholder="Select property address" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="43-09 43">43-09 43</SelectItem>
-                  <SelectItem value="43-05 44">43-05 44</SelectItem>
-                  <SelectItem value="45-59 45">45-59 45</SelectItem>
-                  <SelectItem value="41-41 51">41-41 51</SelectItem>
-                  <SelectItem value="59-29 QB">59-29 QB</SelectItem>
-                  <SelectItem value="39-50 60">39-50 60</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="apartmentNumber">Unit/Apartment Number</Label>
-              <Input
-                id="apartmentNumber"
-                data-testid="input-apartment"
-                placeholder="Unit number (if applicable)"
-                {...form.register("apartmentNumber")}
-              />
-            </div>
-          </div>
-
-          {/* Affected Parties */}
+          {/* Property */}
           <div className="space-y-2">
-            <Label>Affected Parties</Label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {affectedPartiesOptions.map((option) => (
-                <div key={option.value} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={option.value}
-                    data-testid={`checkbox-affected-${option.value}`}
-                    onCheckedChange={(checked) => {
-                      const currentParties = form.getValues("affectedParties") || [];
-                      if (checked) {
-                        form.setValue("affectedParties", [...currentParties, option.value as any]);
-                      } else {
-                        form.setValue("affectedParties", currentParties.filter(p => p !== option.value));
-                      }
-                    }}
-                  />
-                  <Label
-                    htmlFor={option.value}
-                    className="text-sm font-normal cursor-pointer"
-                  >
-                    {option.label}
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Preferred Timeline */}
-          <div className="space-y-2">
-            <Label htmlFor="timeline" className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Preferred Resolution Timeline
-            </Label>
-            <Select onValueChange={(value) => form.setValue("preferredTimeline", value as any)} defaultValue="no_timeline">
-              <SelectTrigger data-testid="select-timeline">
-                <SelectValue placeholder="Select preferred timeline" />
+            <Label htmlFor="property">Property</Label>
+            <Select onValueChange={(value) => form.setValue("property", value)}>
+              <SelectTrigger data-testid="select-property">
+                <SelectValue placeholder="Select property" />
               </SelectTrigger>
               <SelectContent>
-                {timelineOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
+                <SelectItem value="43-09 43">43-09 43</SelectItem>
+                <SelectItem value="43-05 44">43-05 44</SelectItem>
+                <SelectItem value="45-59 45">45-59 45</SelectItem>
+                <SelectItem value="41-41 51">41-41 51</SelectItem>
+                <SelectItem value="59-29 QB">59-29 QB</SelectItem>
+                <SelectItem value="39-50 60">39-50 60</SelectItem>
               </SelectContent>
             </Select>
           </div>
+
+
 
           {/* Contact Method */}
           <div className="space-y-2">

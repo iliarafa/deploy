@@ -3,13 +3,17 @@ import { useQueryClient } from '@tanstack/react-query';
 import { wsClient } from '@/lib/websocket';
 import { pushManager } from '@/lib/push-notifications';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/auth-context';
 
 export function useNotifications() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { isAuthenticated, isLoading } = useAuth();
   const initialized = useRef(false);
 
   useEffect(() => {
+    // Don't initialize if not authenticated or still loading
+    if (!isAuthenticated || isLoading) return;
     if (initialized.current) return;
     initialized.current = true;
 
@@ -59,7 +63,7 @@ export function useNotifications() {
     return () => {
       wsClient.disconnect();
     };
-  }, [queryClient, toast]);
+  }, [queryClient, toast, isAuthenticated, isLoading]);
 
   return {
     requestNotificationPermission: () => pushManager.requestPermission(),

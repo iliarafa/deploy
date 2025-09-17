@@ -118,11 +118,8 @@ export const issues = pgTable("issues", {
   id: serial("id").primaryKey(),
   description: text("description").notNull(),
   urgency: text("urgency").notNull().default("normal"), // emergency, high, normal
-  category: text("category").notNull().default("other"), // maintenance, tenant_relations, security, administrative, utilities, other
+  category: text("category").notNull().default("idle_elevator"), // idle_elevator, no_heat_hot_water, no_electricity
   property: text("property"),
-  apartmentNumber: text("apartment_number"),
-  affectedParties: text("affected_parties").array(), // tenants, staff, contractors, public
-  preferredTimeline: text("preferred_timeline").default("no_timeline"), // asap, week, month, no_timeline
   contactMethod: text("contact_method").default("email"), // email, phone, app
   attachments: text("attachments").array(), // file paths for uploaded images/documents
   status: text("status").notNull().default("pending"), // pending, in_progress, resolved, cancelled
@@ -307,11 +304,8 @@ export const insertIssueSchema = createInsertSchema(issues)
   .extend({
     description: z.string().min(10, "Please provide a detailed description (at least 10 characters)"),
     urgency: z.enum(["emergency", "high", "normal"]),
-    category: z.enum(["maintenance", "tenant_relations", "security", "administrative", "utilities", "other"]),
+    category: z.enum(["idle_elevator", "no_heat_hot_water", "no_electricity"]),
     property: z.string().optional(),
-    apartmentNumber: z.string().optional(),
-    affectedParties: z.array(z.enum(["tenants", "staff", "contractors", "public"])).optional(),
-    preferredTimeline: z.enum(["asap", "week", "month", "no_timeline"]).optional(),
     contactMethod: z.enum(["email", "phone", "app"]).optional(),
   });
 
