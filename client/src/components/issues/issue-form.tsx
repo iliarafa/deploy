@@ -141,12 +141,19 @@ export function IssueForm({ onSubmit, isLoading = false }: IssueFormProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="property">Property Address</Label>
-              <Input
-                id="property"
-                data-testid="input-property"
-                placeholder="Property address"
-                {...form.register("property")}
-              />
+              <Select onValueChange={(value) => form.setValue("property", value)}>
+                <SelectTrigger data-testid="select-property">
+                  <SelectValue placeholder="Select property address" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="43-09 43">43-09 43</SelectItem>
+                  <SelectItem value="43-05 44">43-05 44</SelectItem>
+                  <SelectItem value="45-59 45">45-59 45</SelectItem>
+                  <SelectItem value="41-41 51">41-41 51</SelectItem>
+                  <SelectItem value="59-29 QB">59-29 QB</SelectItem>
+                  <SelectItem value="39-50 60">39-50 60</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="apartmentNumber">Unit/Apartment Number</Label>
