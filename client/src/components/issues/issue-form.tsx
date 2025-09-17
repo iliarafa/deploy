@@ -104,15 +104,15 @@ export function IssueForm({ onSubmit, isLoading = false }: IssueFormProps) {
           <div className="space-y-2">
             <Label htmlFor="urgency">Urgency Level *</Label>
             <Select onValueChange={(value) => form.setValue("urgency", value as any)} defaultValue="normal">
-              <SelectTrigger data-testid="select-urgency" className="text-left text-sm w-full overflow-visible whitespace-nowrap">
+              <SelectTrigger data-testid="select-urgency" className="text-left text-xs sm:text-sm w-full overflow-visible whitespace-nowrap">
                 <SelectValue placeholder="Select urgency level" />
               </SelectTrigger>
               <SelectContent>
                 {urgencyOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
-                    <div className="flex flex-col items-start text-left text-sm">
+                    <div className="flex flex-col items-start text-left text-xs sm:text-sm">
                       <span className="whitespace-nowrap">{option.label}</span>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">{option.description}</span>
+                      <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">{option.description}</span>
                     </div>
                   </SelectItem>
                 ))}
