@@ -1295,7 +1295,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userRole = req.user?.role;
       
       // Check if user has admin or project manager role
-      if (!["admin", "project_manager"].includes(userRole)) {
+      if (!userRole || !["admin", "project_manager"].includes(userRole)) {
         return res.status(403).json({ message: "Access denied. Admin or project manager role required." });
       }
       
@@ -1313,7 +1313,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userRole = req.user?.role;
       
       // Only admins and project managers can update issue status
-      if (!["admin", "project_manager"].includes(userRole)) {
+      if (!userRole || !["admin", "project_manager"].includes(userRole)) {
         return res.status(403).json({ message: "Access denied. Admin or project manager role required." });
       }
 

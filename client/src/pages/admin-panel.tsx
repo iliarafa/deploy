@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { UserCheck, UserX, Users, Clock, Shield, Edit, UserPlus } from "lucide-react";
+import { UserCheck, UserX, Users, Clock, Shield, Edit, UserPlus, AlertTriangle } from "lucide-react";
 import { USER_ROLES } from "@shared/roles";
 import type { 
   UserRegistrationRequest, 
@@ -272,7 +272,7 @@ export default function AdminPanel() {
           </div>
 
       <Tabs defaultValue="requests" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="requests" data-testid="tab-registration-requests">
             <Clock className="h-4 w-4 mr-2" />
             Registration Requests
@@ -285,6 +285,10 @@ export default function AdminPanel() {
           <TabsTrigger value="users" data-testid="tab-user-management">
             <Users className="h-4 w-4 mr-2" />
             User Management
+          </TabsTrigger>
+          <TabsTrigger value="issues" data-testid="tab-issue-management">
+            <AlertTriangle className="h-4 w-4 mr-2" />
+            Issue Management
           </TabsTrigger>
         </TabsList>
 
@@ -734,6 +738,34 @@ export default function AdminPanel() {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="issues" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Issue Management</CardTitle>
+              <CardDescription>
+                View and manage all property management issues
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <AlertTriangle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Advanced Issue Management</h3>
+                <p className="text-muted-foreground mb-4">
+                  Access the full issue management interface to view, filter, and manage all reported issues.
+                </p>
+                <Button 
+                  onClick={() => window.open('/admin/issues', '_blank')}
+                  className="bg-primary hover:bg-primary/90 text-white"
+                  data-testid="button-open-issue-management"
+                >
+                  <AlertTriangle className="w-4 h-4 mr-2" />
+                  Open Issue Management
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
