@@ -81,10 +81,7 @@ export function IssueForm({ onSubmit, isLoading = false }: IssueFormProps) {
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <AlertCircle className="h-5 w-5" />
-          Report an Issue
-        </CardTitle>
+        
       </CardHeader>
       <CardContent>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
