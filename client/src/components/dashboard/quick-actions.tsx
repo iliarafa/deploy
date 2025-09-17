@@ -2,12 +2,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Package, ClipboardCheck, AlertTriangle, Home } from "lucide-react";
 import { useState } from "react";
+import { useLocation } from "wouter";
 import TaskModal from "@/components/tasks/task-modal";
 import MaterialRequestModal from "@/components/materials/material-request-modal";
 import InspectionModal from "@/components/inspections/inspection-modal";
 import VacancyModal from "@/components/vacancies/vacancy-modal";
 
 export default function QuickActions() {
+  const [, setLocation] = useLocation();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
   const [isInspectionModalOpen, setIsInspectionModalOpen] = useState(false);
@@ -55,7 +57,8 @@ export default function QuickActions() {
             
             <Button 
               className="w-full justify-start bg-yellow-500 hover:bg-yellow-600 text-white"
-              onClick={() => {/* TODO: Implement report issue */}}
+              onClick={() => setLocation("/issues")}
+              data-testid="button-report-issue"
             >
               <AlertTriangle className="w-4 h-4 mr-3" />
               Report Issue
