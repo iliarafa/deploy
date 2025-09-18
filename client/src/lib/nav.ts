@@ -10,7 +10,7 @@ export const NAV_OPTIONS = {
   tasks: { id: "tasks" as const, label: "Tasks", icon: CheckSquare, path: "/tasks" },
   materials: { id: "materials" as const, label: "Materials", icon: Package, path: "/materials" },
   vacancies: { id: "vacancies" as const, label: "Vacancies", icon: Home, path: "/vacancies" },
-  issues: { id: "issues" as const, label: "Issues", icon: AlertTriangle, path: "/issues" },
+  issues: { id: "issues" as const, label: "Report", icon: AlertTriangle, path: "/issues" },
   admin: { id: "admin" as const, label: "Admin", icon: Shield, path: "/admin" },
   calendar: { id: "calendar" as const, label: "Calendar", icon: Calendar, path: "/calendar" }
 } as const;
