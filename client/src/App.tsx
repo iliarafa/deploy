@@ -22,6 +22,7 @@ import Colab from "@/pages/colab";
 import Vacancies from "@/pages/vacancies";
 import Issues from "@/pages/issues";
 import AdminIssues from "@/pages/admin-issues";
+import { Settings } from "@/pages/settings";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -61,6 +62,7 @@ function Router() {
       <Route path="/admin" component={AdminPanel} />
       <Route path="/colab" component={Colab} />
       <Route path="/profile" component={Profile} />
+      <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );
