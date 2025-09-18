@@ -2,6 +2,7 @@ import {
   users, 
   userRegistrationRequests,
   userSessions,
+  userSettings,
   tasks, 
   materialRequests, 
   communications,
@@ -16,6 +17,9 @@ import {
   type ReviewRegistrationRequest,
   type UserSession,
   type InsertUserSession,
+  type UserSettings,
+  type InsertUserSettings,
+  type UpdateUserSettings,
   type Task,
   type InsertTask,
   type MaterialRequest,
@@ -89,6 +93,12 @@ export interface IStorage {
   deleteSession(token: string): Promise<void>;
   cleanExpiredSessions(): Promise<void>;
   
+  // User settings operations
+  getUserSettings(userId: number): Promise<UserSettings | undefined>;
+  createUserSettings(settings: InsertUserSettings): Promise<UserSettings>;
+  updateUserSettings(userId: number, updates: UpdateUserSettings): Promise<UserSettings>;
+  ensureUserSettings(userId: number): Promise<UserSettings>;
+  
   // Task operations with role-based filtering
   getTasks(userId?: number, userRole?: UserRole): Promise<Task[]>;
   getTask(id: number): Promise<Task | undefined>;
@@ -145,6 +155,7 @@ export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private registrationRequests: Map<number, UserRegistrationRequest>;
   private sessions: Map<string, UserSession>;
+  private userSettings: Map<number, UserSettings>;
   private tasks: Map<number, Task>;
   private materialRequests: Map<number, MaterialRequest>;
   private communications: Map<number, Communication>;
@@ -159,11 +170,13 @@ export class MemStorage implements IStorage {
   private currentVacancyId: number;
   private currentColabMessageId: number;
   private currentIssueId: number;
+  private currentUserSettingsId: number;
 
   constructor() {
     this.users = new Map();
     this.registrationRequests = new Map();
     this.sessions = new Map();
+    this.userSettings = new Map();
     this.tasks = new Map();
     this.materialRequests = new Map();
     this.communications = new Map();
@@ -178,6 +191,7 @@ export class MemStorage implements IStorage {
     this.currentVacancyId = 1;
     this.currentColabMessageId = 1;
     this.currentIssueId = 1;
+    this.currentUserSettingsId = 1;
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -377,6 +391,88 @@ export class MemStorage implements IStorage {
     expiredTokens.forEach(token => this.sessions.delete(token));
   }
 
+  // User settings operations
+  async getUserSettings(userId: number): Promise<UserSettings | undefined> {
+    return this.userSettings.get(userId);
+  }
+
+  async createUserSettings(settings: InsertUserSettings): Promise<UserSettings> {
+    const id = this.currentUserSettingsId++;
+    const userSettings: UserSettings = {
+      ...settings,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.userSettings.set(settings.userId, userSettings);
+    return userSettings;
+  }
+
+  async updateUserSettings(userId: number, updates: UpdateUserSettings): Promise<UserSettings> {
+    const existingSettings = this.userSettings.get(userId);
+    if (!existingSettings) {
+      // Create default settings if they don't exist
+      const newSettings: InsertUserSettings = {
+        userId,
+        language: "en",
+        defaultLandingPage: "today",
+        navShortcuts: [],
+        theme: "light",
+        calendarView: "month",
+        taskListView: "card",
+        showCompletedTasks: false,
+        emailNotifications: true,
+        taskNotifications: true,
+        issueNotifications: true,
+        materialNotifications: true,
+        calendarNotifications: true,
+        colabNotifications: true,
+        passwordExpiryDays: 90,
+        requirePasswordChange: false,
+        twoFactorEnabled: false,
+        ...updates,
+      };
+      return this.createUserSettings(newSettings);
+    }
+
+    const updatedSettings = {
+      ...existingSettings,
+      ...updates,
+      updatedAt: new Date(),
+    };
+    this.userSettings.set(userId, updatedSettings);
+    return updatedSettings;
+  }
+
+  async ensureUserSettings(userId: number): Promise<UserSettings> {
+    const existing = await this.getUserSettings(userId);
+    if (existing) {
+      return existing;
+    }
+
+    // Create default settings for new user
+    const defaultSettings: InsertUserSettings = {
+      userId,
+      language: "en",
+      defaultLandingPage: "today",
+      navShortcuts: [],
+      theme: "light",
+      calendarView: "month",
+      taskListView: "card",
+      showCompletedTasks: false,
+      emailNotifications: true,
+      taskNotifications: true,
+      issueNotifications: true,
+      materialNotifications: true,
+      calendarNotifications: true,
+      colabNotifications: true,
+      passwordExpiryDays: 90,
+      requirePasswordChange: false,
+      twoFactorEnabled: false,
+    };
+    return this.createUserSettings(defaultSettings);
+  }
+
   async getUsers(): Promise<User[]> {
     return Array.from(this.users.values()).filter(user => user.isActive);
   }
@@ -386,18 +482,16 @@ export class MemStorage implements IStorage {
   }
 
   async getUserNavPrefs(userId: number): Promise<{ navShortcuts: NavShortcutId[] }> {
-    const user = await this.getUser(userId);
-    if (!user) {
-      throw new Error(`User with id ${userId} not found`);
-    }
-    // Ensure we always return an array, even if navShortcuts is undefined or an object
-    const navShortcuts = Array.isArray(user.navShortcuts) ? user.navShortcuts as NavShortcutId[] : [];
+    // Use user settings as the source of truth for nav shortcuts
+    const settings = await this.ensureUserSettings(userId);
+    const navShortcuts = Array.isArray(settings.navShortcuts) ? settings.navShortcuts as NavShortcutId[] : [];
     return { navShortcuts };
   }
 
   async updateUserNavPrefs(userId: number, navShortcuts: NavShortcutId[]): Promise<{ navShortcuts: NavShortcutId[] }> {
-    const user = await this.updateUser(userId, { navShortcuts });
-    const resultShortcuts = Array.isArray(user.navShortcuts) ? user.navShortcuts as NavShortcutId[] : [];
+    // Update user settings instead of user table directly
+    const settings = await this.updateUserSettings(userId, { navShortcuts });
+    const resultShortcuts = Array.isArray(settings.navShortcuts) ? settings.navShortcuts as NavShortcutId[] : [];
     return { navShortcuts: resultShortcuts };
   }
 
@@ -940,6 +1034,87 @@ export class DatabaseStorage implements IStorage {
     await db.delete(userSessions).where(lt(userSessions.expiresAt, new Date()));
   }
 
+  // User settings operations
+  async getUserSettings(userId: number): Promise<UserSettings | undefined> {
+    const [settings] = await db
+      .select()
+      .from(userSettings)
+      .where(eq(userSettings.userId, userId));
+    return settings || undefined;
+  }
+
+  async createUserSettings(settings: InsertUserSettings): Promise<UserSettings> {
+    const [userSettingsRecord] = await db
+      .insert(userSettings)
+      .values(settings)
+      .returning();
+    return userSettingsRecord;
+  }
+
+  async updateUserSettings(userId: number, updates: UpdateUserSettings): Promise<UserSettings> {
+    const [updatedSettings] = await db
+      .update(userSettings)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(userSettings.userId, userId))
+      .returning();
+
+    if (!updatedSettings) {
+      // If no existing settings, create them with the updates
+      const defaultSettings: InsertUserSettings = {
+        userId,
+        language: "en",
+        defaultLandingPage: "today",
+        navShortcuts: [],
+        theme: "light",
+        calendarView: "month",
+        taskListView: "card",
+        showCompletedTasks: false,
+        emailNotifications: true,
+        taskNotifications: true,
+        issueNotifications: true,
+        materialNotifications: true,
+        calendarNotifications: true,
+        colabNotifications: true,
+        passwordExpiryDays: 90,
+        requirePasswordChange: false,
+        twoFactorEnabled: false,
+        ...updates,
+      };
+      return this.createUserSettings(defaultSettings);
+    }
+
+    return updatedSettings;
+  }
+
+  async ensureUserSettings(userId: number): Promise<UserSettings> {
+    const existing = await this.getUserSettings(userId);
+    if (existing) {
+      return existing;
+    }
+
+    // Create default settings for new user
+    const defaultSettings: InsertUserSettings = {
+      userId,
+      language: "en",
+      defaultLandingPage: "today",
+      navShortcuts: [],
+      theme: "light",
+      calendarView: "month",
+      taskListView: "card",
+      showCompletedTasks: false,
+      emailNotifications: true,
+      taskNotifications: true,
+      issueNotifications: true,
+      materialNotifications: true,
+      calendarNotifications: true,
+      colabNotifications: true,
+      passwordExpiryDays: 90,
+      requirePasswordChange: false,
+      twoFactorEnabled: false,
+    };
+    return this.createUserSettings(defaultSettings);
+  }
+
   // Task operations with role-based filtering
   async getTasks(userId?: number, userRole?: UserRole): Promise<Task[]> {
     if (!userRole) {
@@ -1249,25 +1424,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserNavPrefs(userId: number): Promise<{ navShortcuts: NavShortcutId[] }> {
-    const user = await this.getUser(userId);
-    if (!user) {
-      throw new Error(`User with id ${userId} not found`);
-    }
-    // Ensure we always return an array, even if navShortcuts is undefined or an object
-    const navShortcuts = Array.isArray(user.navShortcuts) ? user.navShortcuts as NavShortcutId[] : [];
+    // Use user settings as the source of truth for nav shortcuts
+    const settings = await this.ensureUserSettings(userId);
+    const navShortcuts = Array.isArray(settings.navShortcuts) ? settings.navShortcuts as NavShortcutId[] : [];
     return { navShortcuts };
   }
 
   async updateUserNavPrefs(userId: number, navShortcuts: NavShortcutId[]): Promise<{ navShortcuts: NavShortcutId[] }> {
-    const [user] = await db
-      .update(users)
-      .set({ navShortcuts })
-      .where(eq(users.id, userId))
-      .returning();
-    if (!user) {
-      throw new Error(`User with id ${userId} not found`);
-    }
-    const resultShortcuts = Array.isArray(user.navShortcuts) ? user.navShortcuts as NavShortcutId[] : [];
+    // Update user settings instead of user table directly
+    const settings = await this.updateUserSettings(userId, { navShortcuts });
+    const resultShortcuts = Array.isArray(settings.navShortcuts) ? settings.navShortcuts as NavShortcutId[] : [];
     return { navShortcuts: resultShortcuts };
   }
 

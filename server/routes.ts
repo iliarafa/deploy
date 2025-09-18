@@ -41,7 +41,8 @@ import {
   insertColabMessageSchema,
   insertVacancySchema,
   insertIssueSchema,
-  updateNavPrefsSchema
+  updateNavPrefsSchema,
+  updateUserSettingsSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { wsManager } from "./websocket";
@@ -517,6 +518,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Update navigation preferences error:", error);
       res.status(500).json({ message: "Failed to update navigation preferences" });
+    }
+  });
+
+  // User settings routes
+  app.get("/api/me/settings", authenticate, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      const settings = await storage.ensureUserSettings(userId);
+      res.json(settings);
+    } catch (error) {
+      console.error("Get user settings error:", error);
+      res.status(500).json({ message: "Failed to get user settings" });
+    }
+  });
+
+  app.patch("/api/me/settings", authenticate, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+
+      // Validate request body
+      const validation = updateUserSettingsSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: "Invalid user settings",
+          errors: validation.error.errors 
+        });
+      }
+
+      let processedData = { ...validation.data };
+
+      // Apply role-based filtering for navigation shortcuts if being updated
+      if (processedData.navShortcuts) {
+        const user = await storage.getUser(userId);
+        if (!user) {
+          return res.status(404).json({ message: "User not found" });
+        }
+
+        // Role-based filtering and 4-item limit - server-side validation
+        const allowedShortcuts = getShortcutsForRole(user.role as UserRole);
+        const filteredShortcuts = processedData.navShortcuts
+          .filter(shortcut => allowedShortcuts.includes(shortcut))
+          .slice(0, 4); // Enforce 4-item limit
+        
+        // Remove duplicates
+        processedData.navShortcuts = Array.from(new Set(filteredShortcuts));
+      }
+
+      const updatedSettings = await storage.updateUserSettings(userId, processedData);
+      res.json(updatedSettings);
+    } catch (error) {
+      console.error("Update user settings error:", error);
+      res.status(500).json({ message: "Failed to update user settings" });
     }
   });
 

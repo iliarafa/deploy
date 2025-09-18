@@ -4,8 +4,16 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Navigation shortcut options
-export const NavOption = z.enum(["today", "log", "colab", "tasks", "materials", "vacancies", "issues", "admin", "calendar"]);
+export const NavOption = z.enum(["today", "log", "colab", "tasks", "materials", "vacancies", "issues", "admin", "calendar", "settings"]);
 export type NavShortcutId = z.infer<typeof NavOption>;
+
+// Language options
+export const Language = z.enum(["en", "es"]);
+export type LanguageCode = z.infer<typeof Language>;
+
+// Default landing page options
+export const LandingPage = z.enum(["today", "tasks", "calendar", "colab", "materials", "issues"]);
+export type LandingPageId = z.infer<typeof LandingPage>;
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -54,6 +62,33 @@ export const userSessions = pgTable("user_sessions", {
   sessionToken: text("session_token").notNull().unique(),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userSettings = pgTable("user_settings", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().unique(),
+  // General Settings
+  language: text("language").notNull().default("en"), // en, es
+  defaultLandingPage: text("default_landing_page").default("today"),
+  navShortcuts: text("nav_shortcuts").array().default([]),
+  // Display Settings
+  theme: text("theme").notNull().default("light"), // light, dark
+  calendarView: text("calendar_view").notNull().default("month"), // month, week, day
+  taskListView: text("task_list_view").notNull().default("card"), // card, list
+  showCompletedTasks: boolean("show_completed_tasks").notNull().default(false),
+  // Notification Settings
+  emailNotifications: boolean("email_notifications").notNull().default(true),
+  taskNotifications: boolean("task_notifications").notNull().default(true),
+  issueNotifications: boolean("issue_notifications").notNull().default(true),
+  materialNotifications: boolean("material_notifications").notNull().default(true),
+  calendarNotifications: boolean("calendar_notifications").notNull().default(true),
+  colabNotifications: boolean("colab_notifications").notNull().default(true),
+  // Security Settings
+  passwordExpiryDays: integer("password_expiry_days").default(90),
+  requirePasswordChange: boolean("require_password_change").notNull().default(false),
+  twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const tasks = pgTable("tasks", {
@@ -136,9 +171,20 @@ export const usersRelations = relations(users, ({ many, one }) => ({
     references: [users.id],
   }),
   sessions: many(userSessions),
+  settings: one(userSettings, {
+    fields: [users.id],
+    references: [userSettings.userId],
+  }),
   colabMessages: many(colabMessages),
   materialRequests: many(materialRequests),
   reportedIssues: many(issues),
+}));
+
+export const userSettingsRelations = relations(userSettings, ({ one }) => ({
+  user: one(users, {
+    fields: [userSettings.userId],
+    references: [users.id],
+  }),
 }));
 
 export const userRegistrationRequestsRelations = relations(userRegistrationRequests, ({ one }) => ({
@@ -210,6 +256,32 @@ export const insertUserSessionSchema = createInsertSchema(userSessions).omit({
   id: true,
   createdAt: true,
 });
+
+export const insertUserSettingsSchema = createInsertSchema(userSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Proper validation schema with enum constraints
+export const updateUserSettingsSchema = z.object({
+  language: Language.optional(),
+  defaultLandingPage: LandingPage.optional(), 
+  navShortcuts: z.array(NavOption).max(4).optional(),
+  theme: z.enum(["light", "dark"]).optional(),
+  calendarView: z.enum(["month", "week", "day"]).optional(),
+  taskListView: z.enum(["card", "list"]).optional(),
+  showCompletedTasks: z.boolean().optional(),
+  emailNotifications: z.boolean().optional(),
+  taskNotifications: z.boolean().optional(),
+  issueNotifications: z.boolean().optional(),
+  materialNotifications: z.boolean().optional(),
+  calendarNotifications: z.boolean().optional(),
+  colabNotifications: z.boolean().optional(),
+  passwordExpiryDays: z.number().int().min(1).max(365).optional(),
+  requirePasswordChange: z.boolean().optional(),
+  twoFactorEnabled: z.boolean().optional(),
+}).strict();
 
 export const updateUserSchema = createInsertSchema(users).pick({
   firstName: true,
@@ -329,5 +401,8 @@ export type ColabMessage = typeof colabMessages.$inferSelect;
 export type InsertColabMessage = z.infer<typeof insertColabMessageSchema>;
 export type Issue = typeof issues.$inferSelect;
 export type InsertIssue = z.infer<typeof insertIssueSchema>;
+export type UserSettings = typeof userSettings.$inferSelect;
+export type InsertUserSettings = z.infer<typeof insertUserSettingsSchema>;
+export type UpdateUserSettings = z.infer<typeof updateUserSettingsSchema>;
 export type ChangePassword = z.infer<typeof changePasswordSchema>;
 export type UpdateNavPrefs = z.infer<typeof updateNavPrefsSchema>;
