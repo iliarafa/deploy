@@ -411,24 +411,24 @@ export default function Profile() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm font-medium text-[#9bafd4]">Username</Label>
-                  <p className="mt-1 text-sm text-[#ffffff]" data-testid="text-username">{user.username}</p>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Username</Label>
+                  <p className="mt-1 text-sm text-gray-900 dark:text-white" data-testid="text-username">{user.username}</p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-700">Role</Label>
-                  <p className="mt-1 text-sm capitalize text-[#ffffff]" data-testid="text-role">
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Role</Label>
+                  <p className="mt-1 text-sm capitalize text-gray-900 dark:text-white" data-testid="text-role">
                     {user.role.replace('_', ' ')}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-700">Account Status</Label>
-                  <p className="mt-1 text-sm text-gray-900" data-testid="text-status">
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Account Status</Label>
+                  <p className="mt-1 text-sm text-gray-900 dark:text-white" data-testid="text-status">
                     {user.isActive ? "Active" : "Inactive"}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-700">Member Since</Label>
-                  <p className="mt-1 text-sm text-gray-900" data-testid="text-member-since">
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Member Since</Label>
+                  <p className="mt-1 text-sm text-gray-900 dark:text-white" data-testid="text-member-since">
                     {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}
                   </p>
                 </div>
