@@ -143,7 +143,6 @@ export default function Profile() {
     <div className="min-h-screen bg-neutral">
       <Header />
       <MobileNav />
-      
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mb-20 md:mb-0">
         <PasswordChangeReminder />
         
@@ -413,7 +412,7 @@ export default function Profile() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-[#9bafd4]">Username</Label>
-                  <p className="mt-1 text-sm text-gray-900" data-testid="text-username">{user.username}</p>
+                  <p className="mt-1 text-sm text-[#ffffff]" data-testid="text-username">{user.username}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-700">Role</Label>
