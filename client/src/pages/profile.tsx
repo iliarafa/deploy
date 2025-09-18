@@ -416,7 +416,7 @@ export default function Profile() {
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-700">Role</Label>
-                  <p className="mt-1 text-sm text-gray-900 capitalize" data-testid="text-role">
+                  <p className="mt-1 text-sm capitalize text-[#ffffff]" data-testid="text-role">
                     {user.role.replace('_', ' ')}
                   </p>
                 </div>
