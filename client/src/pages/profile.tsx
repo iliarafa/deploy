@@ -412,7 +412,7 @@ export default function Profile() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm font-medium text-gray-700">Username</Label>
+                  <Label className="text-sm font-medium text-[#9bafd4]">Username</Label>
                   <p className="mt-1 text-sm text-gray-900" data-testid="text-username">{user.username}</p>
                 </div>
                 <div>
