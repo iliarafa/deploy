@@ -94,18 +94,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Create admin user
-      const hashedPassword = hashPassword(password);
       const adminUser = await storage.createUser({
         username,
-        password: hashedPassword,
+        password,
         email: `${username}@admin.local`,
         role: "admin",
         firstName: username,
-        lastName: "Admin",
-        isActive: true,
-        isApproved: true,
-        mustChangePassword: false,
-        navShortcuts: ["tasks", "materials", "issues", "admin"]
+        lastName: "Admin"
       });
       
       // Remove password from response

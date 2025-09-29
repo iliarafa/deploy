@@ -403,6 +403,7 @@ export class MemStorage implements IStorage {
       id,
       navShortcuts: settings.navShortcuts || null,
       language: settings.language || "en",
+      defaultLandingPage: settings.defaultLandingPage || "today",
       theme: settings.theme || "light",
       calendarView: settings.calendarView || "month",
       taskListView: settings.taskListView || "card",
