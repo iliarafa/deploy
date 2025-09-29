@@ -14,6 +14,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
+import { useAuth } from "@/contexts/auth-context";
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -35,11 +36,12 @@ type TaskFormData = z.infer<typeof taskFormSchema>;
 export default function TaskModal({ isOpen, onClose, prefilledDate, prefilledTime }: TaskModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   // Fetch users for assignment dropdown
   const { data: users = [] } = useQuery<any[]>({
     queryKey: ["/api/users"],
-    enabled: isOpen,
+    enabled: isOpen && isAuthenticated && !authLoading,
   });
 
   // Calculate default start date and time

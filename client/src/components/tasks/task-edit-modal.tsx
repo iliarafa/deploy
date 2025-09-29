@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 import TaskStatusUpdate from "./task-status-update";
 import { format } from "date-fns";
+import { useAuth } from "@/contexts/auth-context";
 
 interface TaskEditModalProps {
   task: Task | null;
@@ -35,11 +36,12 @@ type TaskFormData = z.infer<typeof taskFormSchema>;
 export default function TaskEditModal({ task, isOpen, onClose }: TaskEditModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   // Fetch users for assignment dropdown
   const { data: users = [] } = useQuery<any[]>({
     queryKey: ["/api/users"],
-    enabled: isOpen,
+    enabled: isOpen && isAuthenticated && !authLoading,
   });
 
   const form = useForm<TaskFormData>({
