@@ -15,6 +15,10 @@ export type LanguageCode = z.infer<typeof Language>;
 export const LandingPage = z.enum(["today", "tasks", "calendar", "colab", "materials", "issues"]);
 export type LandingPageId = z.infer<typeof LandingPage>;
 
+// Recurrence type options
+export const RecurrenceType = z.enum(["none", "daily", "weekly", "bi-weekly", "monthly", "yearly"]);
+export type RecurrenceTypeId = z.infer<typeof RecurrenceType>;
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -102,6 +106,12 @@ export const tasks = pgTable("tasks", {
   assignedTo: text("assigned_to"),
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date"),
+  // Recurring task fields
+  recurrenceType: text("recurrence_type"), // none, daily, weekly, bi-weekly, monthly, yearly
+  recurrenceInterval: integer("recurrence_interval").default(1), // every N units
+  nextDueDate: timestamp("next_due_date"), // when next instance should be created
+  parentTaskId: integer("parent_task_id"), // reference to original recurring task
+  isRecurringTemplate: boolean("is_recurring_template").default(false), // marks the original template
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -201,8 +211,13 @@ export const userSessionsRelations = relations(userSessions, ({ one }) => ({
   }),
 }));
 
-export const tasksRelations = relations(tasks, ({ many }) => ({
+export const tasksRelations = relations(tasks, ({ many, one }) => ({
   communications: many(communications),
+  parentTask: one(tasks, {
+    fields: [tasks.parentTaskId],
+    references: [tasks.id],
+  }),
+  childTasks: many(tasks),
 }));
 
 export const communicationsRelations = relations(communications, ({ one }) => ({
@@ -337,6 +352,9 @@ export const changePasswordSchema = z.object({
 export const insertTaskSchema = createInsertSchema(tasks).omit({
   id: true,
   createdAt: true,
+}).extend({
+  recurrenceType: RecurrenceType.optional(),
+  recurrenceInterval: z.number().int().min(1).max(365).optional(),
 });
 
 export const insertMaterialRequestSchema = createInsertSchema(materialRequests).omit({
