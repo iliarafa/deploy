@@ -20,15 +20,9 @@ export default function LandingPage() {
     setError("");
     setLoading(true);
 
-    // Debug logging for production
-    console.log("LandingPage: Form submitted with username:", username);
-    console.log("LandingPage: Attempting login...");
-
     try {
       await login(username, password);
-      console.log("LandingPage: Login successful");
     } catch (error) {
-      console.error("LandingPage: Login error:", error);
       setError(error instanceof Error ? error.message : "Login failed");
     } finally {
       setLoading(false);

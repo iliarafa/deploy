@@ -139,18 +139,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (username: string, password: string) => {
     try {
       setIsLoading(true);
-      console.log("Auth Context: Starting login for username:", username);
-      
       const response = await apiRequest('POST', '/api/auth/login', {
         username,
         password
       });
 
-      console.log("Auth Context: API response status:", response.status);
-
       if (!response.ok) {
         const error = await response.json();
-        console.error("Auth Context: Login failed with error:", error);
         throw new Error(error.message || 'Login failed');
       }
 

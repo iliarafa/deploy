@@ -74,47 +74,6 @@ function getShortcutsForRole(role: UserRole): NavShortcutId[] {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
-  // TEMPORARY: Admin reset route for production (REMOVE AFTER USE)
-  app.post("/api/admin/create-admin-user", async (req, res) => {
-    try {
-      const { username, password, confirmPassword } = req.body;
-      
-      if (password !== confirmPassword) {
-        return res.status(400).json({ message: "Passwords don't match" });
-      }
-      
-      if (password.length < 6) {
-        return res.status(400).json({ message: "Password must be at least 6 characters" });
-      }
-      
-      // Check if user already exists
-      const existingUser = await storage.getUserByUsername(username);
-      if (existingUser) {
-        return res.status(400).json({ message: `User '${username}' already exists` });
-      }
-      
-      // Create admin user
-      const adminUser = await storage.createUser({
-        username,
-        password,
-        email: `${username}@admin.local`,
-        role: "admin",
-        firstName: username,
-        lastName: "Admin"
-      });
-      
-      // Remove password from response
-      const { password: _, ...safeUser } = adminUser;
-      
-      res.json({ 
-        message: `Admin user '${username}' created successfully`,
-        user: safeUser
-      });
-    } catch (error) {
-      console.error("Admin user creation error:", error);
-      res.status(500).json({ message: "Failed to create admin user" });
-    }
-  });
 
   // Authentication routes
   app.post("/api/auth/login", async (req, res) => {
