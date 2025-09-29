@@ -42,9 +42,16 @@ function Router() {
     );
   }
   
-  // Show landing page if not authenticated
+  // Show unauthenticated routes if not authenticated
   if (!isAuthenticated) {
-    return <LandingPage />;
+    return (
+      <Switch>
+        <Route path="/login" component={Login} />
+        <Route path="/register" component={Register} />
+        <Route path="/" component={LandingPage} />
+        <Route component={LandingPage} />
+      </Switch>
+    );
   }
   
   // Show full app if authenticated

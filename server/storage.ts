@@ -401,6 +401,7 @@ export class MemStorage implements IStorage {
     const userSettings: UserSettings = {
       ...settings,
       id,
+      navShortcuts: settings.navShortcuts || null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -806,7 +807,6 @@ export class MemStorage implements IStorage {
       urgency: insertIssue.urgency || "normal",
       category: insertIssue.category || "idle_elevator",
       property: insertIssue.property || null,
-      contactMethod: insertIssue.contactMethod || "email",
       attachments: insertIssue.attachments || null,
       status: insertIssue.status || "pending",
       reportedBy: insertIssue.reportedBy,
