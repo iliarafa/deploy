@@ -77,8 +77,8 @@ export default function Header() {
                 </Link>
               )}
               
-              {/* Colab tab for workers and managers */}
-              {user && (user.role === 'worker' || user.role === 'project_manager' || user.role === 'admin') && (
+              {/* Temporarily hidden - Colab tab for workers and managers */}
+              {false && user && (user.role === 'worker' || user.role === 'project_manager' || user.role === 'admin') && (
                 <Link href="/colab">
                   <span 
                     className={`text-sm pb-2 cursor-pointer ${

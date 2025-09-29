@@ -41,7 +41,8 @@ export const DEFAULT_NAV_PREFS: Record<UserRole, NavShortcutId[]> = {
 // Helper function to get allowed shortcuts for a user role
 export function getAllowedShortcuts(role: UserRole): NavShortcutId[] {
   return Object.keys(NAV_RULES).filter(shortcut => 
-    NAV_RULES[shortcut as NavShortcutId].allowedRoles.includes(role)
+    NAV_RULES[shortcut as NavShortcutId].allowedRoles.includes(role) &&
+    shortcut !== "colab" // Temporarily hide colab
   ) as NavShortcutId[];
 }
 
