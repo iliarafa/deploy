@@ -25,7 +25,8 @@ export const NAV_RULES: Record<NavShortcutId, { allowedRoles: UserRole[]; requir
   vacancies: { allowedRoles: ["project_manager", "admin"], requiresAuth: true },
   issues: { allowedRoles: ["worker", "project_manager", "admin", "supervisor", "inspector", "client"], requiresAuth: true },
   admin: { allowedRoles: ["admin"], requiresAuth: true },
-  calendar: { allowedRoles: ["worker", "project_manager", "admin", "supervisor", "inspector", "client"], requiresAuth: true }
+  calendar: { allowedRoles: ["worker", "project_manager", "admin", "supervisor", "inspector", "client"], requiresAuth: true },
+  settings: { allowedRoles: ["worker", "project_manager", "admin", "supervisor", "inspector", "client"], requiresAuth: true }
 };
 
 // Default navigation preferences by role
