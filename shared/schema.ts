@@ -353,6 +353,8 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({
   id: true,
   createdAt: true,
 }).extend({
+  startDate: z.string().datetime().or(z.date()),
+  endDate: z.string().datetime().optional().or(z.date().optional()),
   recurrenceType: RecurrenceType.optional(),
   recurrenceInterval: z.number().int().min(1).max(365).optional(),
 });
