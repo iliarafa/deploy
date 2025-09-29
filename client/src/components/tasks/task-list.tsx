@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { type Task } from "@shared/schema";
-import { ChevronRight, Clock, MapPin, User } from "lucide-react";
+import { ChevronRight, Clock, MapPin, User, Repeat, RotateCcw } from "lucide-react";
 import { getCategoryColor } from "@/lib/calendar-utils";
 import { formatTime } from "@/lib/date-utils";
 import { useAuth } from "@/contexts/auth-context";
@@ -44,6 +44,10 @@ export default function TaskList() {
                               task.status === 'in-progress' ? 'status-glow-progress' :
                               task.status === 'completed' ? 'status-glow-completed' : '';
               
+              // Determine if task is recurring
+              const isRecurringTemplate = task.isRecurringTemplate && task.recurrenceType && task.recurrenceType !== 'none';
+              const isRecurringInstance = task.parentTaskId && !task.isRecurringTemplate;
+              
               return (
                 <div 
                   key={task.id} 
@@ -54,7 +58,21 @@ export default function TaskList() {
                   <div className={`w-3 h-3 rounded-full mr-3 transition-all duration-300 ${getCategoryColor(task.category).replace('text-white', '').replace('bg-', 'bg-').split(' ')[0]}`}></div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-gray-900">{task.title}</h4>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium text-gray-900">{task.title}</h4>
+                      {isRecurringTemplate && (
+                        <div className="flex items-center gap-1 text-blue-600 bg-blue-50 px-2 py-1 rounded-md text-xs font-medium">
+                          <Repeat className="w-3 h-3" />
+                          <span>Template</span>
+                        </div>
+                      )}
+                      {isRecurringInstance && (
+                        <div className="flex items-center gap-1 text-green-600 bg-green-50 px-2 py-1 rounded-md text-xs font-medium">
+                          <RotateCcw className="w-3 h-3" />
+                          <span>Recurring</span>
+                        </div>
+                      )}
+                    </div>
                     <div className="flex items-center text-sm text-gray-500">
                       <Clock className="w-4 h-4 mr-1" />
                       <span>{formatTime(task.startDate)}</span>

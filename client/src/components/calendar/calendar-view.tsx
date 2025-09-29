@@ -7,6 +7,7 @@ import { getCategoryColor } from "@/lib/calendar-utils";
 import TaskDetailModal from "@/components/tasks/task-detail-modal";
 import { useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
+import { Repeat, RotateCcw } from "lucide-react";
 
 interface CalendarViewProps {
   currentDate: Date;
@@ -116,10 +117,14 @@ export default function CalendarView({
                               task.status === 'in-progress' ? 'status-glow-progress' :
                               task.status === 'completed' ? 'status-glow-completed' : '';
               
+              // Determine if task is recurring
+              const isRecurringTemplate = task.isRecurringTemplate && task.recurrenceType && task.recurrenceType !== 'none';
+              const isRecurringInstance = task.parentTaskId && !task.isRecurringTemplate;
+              
               return (
                 <div 
                   key={task.id} 
-                  className={`task-element task-animate-enter task-animate-hover ${getCategoryColor(task.category)} ${statusClasses} ${glowClass} text-xs px-2 py-1 rounded truncate cursor-pointer transform-gpu`}
+                  className={`task-element task-animate-enter task-animate-hover ${getCategoryColor(task.category)} ${statusClasses} ${glowClass} text-xs px-2 py-1 rounded truncate cursor-pointer transform-gpu flex items-center gap-1`}
                   data-testid={`task-chip-${task.id}`}
                   style={{ animationDelay: `${index * 0.1}s` }}
                   onClick={(e) => {
@@ -127,7 +132,13 @@ export default function CalendarView({
                     handleTaskClick(task);
                   }}
                 >
-                  {task.title}
+                  {isRecurringTemplate && (
+                    <Repeat className="w-2.5 h-2.5 flex-shrink-0" title="Recurring Template" />
+                  )}
+                  {isRecurringInstance && (
+                    <RotateCcw className="w-2.5 h-2.5 flex-shrink-0" title="Recurring Instance" />
+                  )}
+                  <span className="truncate">{task.title}</span>
                 </div>
               );
             })}
@@ -206,6 +217,10 @@ export default function CalendarView({
                                       task.status === 'in-progress' ? 'status-glow-progress' :
                                       task.status === 'completed' ? 'status-glow-completed' : '';
                       
+                      // Determine if task is recurring
+                      const isRecurringTemplate = task.isRecurringTemplate && task.recurrenceType && task.recurrenceType !== 'none';
+                      const isRecurringInstance = task.parentTaskId && !task.isRecurringTemplate;
+                      
                       return (
                         <div
                           key={task.id}
@@ -221,7 +236,15 @@ export default function CalendarView({
                             handleTaskClick(task);
                           }}
                         >
-                          <div className="font-medium">{task.title}</div>
+                          <div className="flex items-center gap-1 font-medium">
+                            {isRecurringTemplate && (
+                              <Repeat className="w-2.5 h-2.5 flex-shrink-0" title="Recurring Template" />
+                            )}
+                            {isRecurringInstance && (
+                              <RotateCcw className="w-2.5 h-2.5 flex-shrink-0" title="Recurring Instance" />
+                            )}
+                            <span className="truncate">{task.title}</span>
+                          </div>
                           <div className="text-[10px] opacity-75">
                             {formatTime(new Date(task.startDate))}
                           </div>
@@ -291,6 +314,10 @@ export default function CalendarView({
                                     task.status === 'in-progress' ? 'status-glow-progress' :
                                     task.status === 'completed' ? 'status-glow-completed' : '';
                     
+                    // Determine if task is recurring
+                    const isRecurringTemplate = task.isRecurringTemplate && task.recurrenceType && task.recurrenceType !== 'none';
+                    const isRecurringInstance = task.parentTaskId && !task.isRecurringTemplate;
+                    
                     const taskDate = new Date(task.startDate);
                     const taskMinute = taskDate.getMinutes();
                     const offsetFromSlotStart = taskMinute - minute;
@@ -310,7 +337,15 @@ export default function CalendarView({
                           handleTaskClick(task);
                         }}
                       >
-                        <div className="font-semibold">{task.title}</div>
+                        <div className="flex items-center gap-2 font-semibold">
+                          {isRecurringTemplate && (
+                            <Repeat className="w-3 h-3 flex-shrink-0" title="Recurring Template" />
+                          )}
+                          {isRecurringInstance && (
+                            <RotateCcw className="w-3 h-3 flex-shrink-0" title="Recurring Instance" />
+                          )}
+                          <span className="truncate">{task.title}</span>
+                        </div>
                         <div className="text-xs opacity-90 mt-1">
                           {formatTime(new Date(task.startDate))}
                           {task.assignedTo && ` • ${task.assignedTo}`}

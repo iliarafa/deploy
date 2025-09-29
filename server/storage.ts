@@ -36,7 +36,7 @@ import {
 } from "@shared/schema";
 import { type UserRole, type Permission, hasPermission, getUserPermissions } from "@shared/roles";
 import { db } from "./db";
-import { eq, and, gte, lte, lt, or, ilike } from "drizzle-orm";
+import { eq, and, gte, lte, lt, or, ilike, isNotNull } from "drizzle-orm";
 import { randomBytes, createHash, pbkdf2Sync } from "crypto";
 
 // Date conversion utility for handling string dates from form inputs
@@ -107,6 +107,12 @@ export interface IStorage {
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: number, updates: Partial<InsertTask>): Promise<Task>;
   deleteTask(id: number): Promise<void>;
+  
+  // Recurring task operations
+  getRecurringTasks(): Promise<Task[]>;
+  getTasksForRecurrence(): Promise<Task[]>;
+  generateRecurringTaskInstances(): Promise<Task[]>;
+  getTasksByParent(parentTaskId: number): Promise<Task[]>;
   
   // Material request operations with role-based filtering
   getMaterialRequests(userId?: number, userRole?: UserRole): Promise<MaterialRequest[]>;
@@ -574,7 +580,13 @@ export class MemStorage implements IStorage {
       assignedTo: insertTask.assignedTo || null,
       endDate: insertTask.endDate || null,
       status: insertTask.status || "pending",
-      priority: insertTask.priority || "standard"
+      priority: insertTask.priority || "standard",
+      // Handle recurring task fields with proper null defaults
+      recurrenceType: insertTask.recurrenceType || null,
+      recurrenceInterval: insertTask.recurrenceInterval || 1,
+      nextDueDate: insertTask.nextDueDate || null,
+      parentTaskId: insertTask.parentTaskId || null,
+      isRecurringTemplate: insertTask.isRecurringTemplate || false
     };
     this.tasks.set(id, task);
     return task;
@@ -604,6 +616,87 @@ export class MemStorage implements IStorage {
     const allTasks = Array.from(this.tasks.values());
     // Return tasks assigned to the specific worker (assignedTo stores usernames, not IDs)
     return allTasks.filter(task => task.assignedTo === username);
+  }
+
+  // Recurring task operations
+  async getRecurringTasks(): Promise<Task[]> {
+    return Array.from(this.tasks.values()).filter(task => 
+      task.isRecurringTemplate && task.recurrenceType && task.recurrenceType !== 'none'
+    );
+  }
+
+  async getTasksForRecurrence(): Promise<Task[]> {
+    const now = new Date();
+    return Array.from(this.tasks.values()).filter(task => 
+      task.isRecurringTemplate && 
+      task.recurrenceType && 
+      task.recurrenceType !== 'none' &&
+      task.nextDueDate && 
+      new Date(task.nextDueDate) <= now
+    );
+  }
+
+  async generateRecurringTaskInstances(): Promise<Task[]> {
+    const recurringTasks = await this.getTasksForRecurrence();
+    const generatedTasks: Task[] = [];
+    
+    for (const template of recurringTasks) {
+      if (!template.nextDueDate || !template.recurrenceType) continue;
+      
+      // Calculate next dates based on recurrence type
+      const nextDueDate = this.calculateNextDueDate(template.nextDueDate, template.recurrenceType, template.recurrenceInterval || 1);
+      const taskStartDate = new Date(template.nextDueDate);
+      
+      // Create new task instance
+      const newTask = await this.createTask({
+        title: template.title,
+        description: template.description,
+        category: template.category,
+        priority: template.priority,
+        location: template.location,
+        assignedTo: template.assignedTo,
+        startDate: taskStartDate,
+        endDate: template.endDate ? new Date(template.endDate.getTime() + (taskStartDate.getTime() - template.startDate.getTime())) : undefined,
+        parentTaskId: template.id,
+        isRecurringTemplate: false,
+        recurrenceType: undefined
+      });
+      
+      generatedTasks.push(newTask);
+      
+      // Update template's next due date
+      await this.updateTask(template.id, { nextDueDate });
+    }
+    
+    return generatedTasks;
+  }
+
+  async getTasksByParent(parentTaskId: number): Promise<Task[]> {
+    return Array.from(this.tasks.values()).filter(task => task.parentTaskId === parentTaskId);
+  }
+
+  private calculateNextDueDate(currentDate: Date, recurrenceType: string, interval: number): Date {
+    const nextDate = new Date(currentDate);
+    
+    switch (recurrenceType) {
+      case 'daily':
+        nextDate.setDate(nextDate.getDate() + interval);
+        break;
+      case 'weekly':
+        nextDate.setDate(nextDate.getDate() + (7 * interval));
+        break;
+      case 'bi-weekly':
+        nextDate.setDate(nextDate.getDate() + (14 * interval));
+        break;
+      case 'monthly':
+        nextDate.setMonth(nextDate.getMonth() + interval);
+        break;
+      case 'yearly':
+        nextDate.setFullYear(nextDate.getFullYear() + interval);
+        break;
+    }
+    
+    return nextDate;
   }
 
   async getMaterialRequests(userId?: number, userRole?: UserRole): Promise<MaterialRequest[]> {
@@ -1215,6 +1308,97 @@ export class DatabaseStorage implements IStorage {
   async getWorkerTasks(username: string): Promise<Task[]> {
     // Return tasks assigned to the specific worker username
     return await db.select().from(tasks).where(eq(tasks.assignedTo, username));
+  }
+
+  // Recurring task operations
+  async getRecurringTasks(): Promise<Task[]> {
+    return await db
+      .select()
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.isRecurringTemplate, true),
+          isNotNull(tasks.recurrenceType)
+        )
+      );
+  }
+
+  async getTasksForRecurrence(): Promise<Task[]> {
+    const now = new Date();
+    return await db
+      .select()
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.isRecurringTemplate, true),
+          isNotNull(tasks.recurrenceType),
+          isNotNull(tasks.nextDueDate),
+          lte(tasks.nextDueDate, now)
+        )
+      );
+  }
+
+  async generateRecurringTaskInstances(): Promise<Task[]> {
+    const recurringTasks = await this.getTasksForRecurrence();
+    const generatedTasks: Task[] = [];
+    
+    for (const template of recurringTasks) {
+      if (!template.nextDueDate || !template.recurrenceType) continue;
+      
+      // Calculate next dates based on recurrence type
+      const nextDueDate = this.calculateNextDueDate(template.nextDueDate, template.recurrenceType, template.recurrenceInterval || 1);
+      const taskStartDate = new Date(template.nextDueDate);
+      
+      // Create new task instance
+      const newTask = await this.createTask({
+        title: template.title,
+        description: template.description,
+        category: template.category,
+        priority: template.priority,
+        location: template.location,
+        assignedTo: template.assignedTo,
+        startDate: taskStartDate,
+        endDate: template.endDate ? new Date(template.endDate.getTime() + (taskStartDate.getTime() - template.startDate.getTime())) : undefined,
+        parentTaskId: template.id,
+        isRecurringTemplate: false,
+        recurrenceType: undefined
+      });
+      
+      generatedTasks.push(newTask);
+      
+      // Update template's next due date
+      await this.updateTask(template.id, { nextDueDate });
+    }
+    
+    return generatedTasks;
+  }
+
+  async getTasksByParent(parentTaskId: number): Promise<Task[]> {
+    return await db.select().from(tasks).where(eq(tasks.parentTaskId, parentTaskId));
+  }
+
+  private calculateNextDueDate(currentDate: Date, recurrenceType: string, interval: number): Date {
+    const nextDate = new Date(currentDate);
+    
+    switch (recurrenceType) {
+      case 'daily':
+        nextDate.setDate(nextDate.getDate() + interval);
+        break;
+      case 'weekly':
+        nextDate.setDate(nextDate.getDate() + (7 * interval));
+        break;
+      case 'bi-weekly':
+        nextDate.setDate(nextDate.getDate() + (14 * interval));
+        break;
+      case 'monthly':
+        nextDate.setMonth(nextDate.getMonth() + interval);
+        break;
+      case 'yearly':
+        nextDate.setFullYear(nextDate.getFullYear() + interval);
+        break;
+    }
+    
+    return nextDate;
   }
 
   async getMaterialRequests(userId?: number, userRole?: UserRole): Promise<MaterialRequest[]> {

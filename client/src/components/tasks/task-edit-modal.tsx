@@ -26,6 +26,8 @@ const taskFormSchema = insertTaskSchema.extend({
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().optional(),
   multiDay: z.boolean().optional(),
+  recurrenceType: z.enum(['none', 'daily', 'weekly', 'bi-weekly', 'monthly', 'yearly']).optional(),
+  recurrenceInterval: z.number().min(1).max(365).optional(),
 });
 
 type TaskFormData = z.infer<typeof taskFormSchema>;
@@ -53,6 +55,8 @@ export default function TaskEditModal({ task, isOpen, onClose }: TaskEditModalPr
       startDate: "",
       endDate: "",
       multiDay: false,
+      recurrenceType: 'none',
+      recurrenceInterval: 1,
     },
   });
 
@@ -70,16 +74,50 @@ export default function TaskEditModal({ task, isOpen, onClose }: TaskEditModalPr
         startDate: format(new Date(task.startDate), "yyyy-MM-dd'T'HH:mm"),
         endDate: task.endDate ? format(new Date(task.endDate), "yyyy-MM-dd'T'HH:mm") : "",
         multiDay: Boolean(task.endDate),
+        recurrenceType: (task.recurrenceType as 'none' | 'daily' | 'weekly' | 'bi-weekly' | 'monthly' | 'yearly') || 'none',
+        recurrenceInterval: task.recurrenceInterval || 1,
       });
     }
   }, [task, form]);
 
   const updateTaskMutation = useMutation({
     mutationFn: async (data: TaskFormData) => {
+      const startDate = new Date(data.startDate);
+      const isRecurring = data.recurrenceType && data.recurrenceType !== 'none';
+      
+      // Calculate next due date for recurring tasks
+      let nextDueDate: Date | undefined;
+      if (isRecurring && data.recurrenceType && data.recurrenceInterval) {
+        nextDueDate = new Date(startDate);
+        const interval = data.recurrenceInterval;
+        
+        switch (data.recurrenceType) {
+          case 'daily':
+            nextDueDate.setDate(nextDueDate.getDate() + interval);
+            break;
+          case 'weekly':
+            nextDueDate.setDate(nextDueDate.getDate() + (7 * interval));
+            break;
+          case 'bi-weekly':
+            nextDueDate.setDate(nextDueDate.getDate() + (14 * interval));
+            break;
+          case 'monthly':
+            nextDueDate.setMonth(nextDueDate.getMonth() + interval);
+            break;
+          case 'yearly':
+            nextDueDate.setFullYear(nextDueDate.getFullYear() + interval);
+            break;
+        }
+      }
+
       const taskData = {
         ...data,
-        startDate: new Date(data.startDate),
+        startDate,
         endDate: data.endDate ? new Date(data.endDate) : null,
+        isRecurringTemplate: isRecurring || false,
+        nextDueDate: nextDueDate,
+        recurrenceType: isRecurring ? data.recurrenceType : undefined,
+        recurrenceInterval: isRecurring ? data.recurrenceInterval : undefined,
       };
       return apiRequest("PUT", `/api/tasks/${task?.id}`, taskData);
     },
@@ -270,6 +308,67 @@ export default function TaskEditModal({ task, isOpen, onClose }: TaskEditModalPr
                     </FormItem>
                   )}
                 />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="recurrenceType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Recurrence</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || "none"}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-recurrence-type">
+                            <SelectValue placeholder="Select recurrence type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">No recurrence</SelectItem>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="bi-weekly">Bi-weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="yearly">Yearly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {form.watch("recurrenceType") !== "none" && form.watch("recurrenceType") && (
+                  <FormField
+                    control={form.control}
+                    name="recurrenceInterval"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          Repeat every {field.value || 1} {
+                            form.watch("recurrenceType") === "daily" ? "day(s)" :
+                            form.watch("recurrenceType") === "weekly" ? "week(s)" :
+                            form.watch("recurrenceType") === "bi-weekly" ? "bi-week(s)" :
+                            form.watch("recurrenceType") === "monthly" ? "month(s)" :
+                            form.watch("recurrenceType") === "yearly" ? "year(s)" : ""
+                          }
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min="1" 
+                            max="365" 
+                            placeholder="1"
+                            {...field}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                            value={field.value || 1}
+                            data-testid="input-recurrence-interval"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
 
               <FormField

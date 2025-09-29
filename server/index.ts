@@ -127,6 +127,49 @@ function generateSecurePassword(): string {
   return password;
 }
 
+// Recurring task generation service
+function initializeRecurringTaskService() {
+  const TASK_GENERATION_INTERVAL = 5 * 60 * 1000; // Check every 5 minutes
+  
+  async function generateRecurringTasks() {
+    try {
+      log("Checking for recurring tasks to generate...");
+      const generatedTasks = await storage.generateRecurringTaskInstances();
+      
+      if (generatedTasks.length > 0) {
+        log(`Generated ${generatedTasks.length} recurring task instances`);
+        
+        // Send WebSocket notifications for new tasks
+        for (const task of generatedTasks) {
+          try {
+            wsManager.broadcast({
+              type: 'task_created',
+              data: {
+                taskId: task.id,
+                taskTitle: task.title,
+                assignedTo: task.assignedTo,
+                isRecurring: true
+              }
+            });
+          } catch (notificationError) {
+            log(`Failed to send notification for recurring task ${task.id}: ${notificationError}`);
+          }
+        }
+      }
+    } catch (error) {
+      log(`Error generating recurring tasks: ${error}`);
+    }
+  }
+  
+  // Run immediately on startup (after a short delay)
+  setTimeout(generateRecurringTasks, 10000); // 10 seconds after startup
+  
+  // Set up interval to run regularly
+  setInterval(generateRecurringTasks, TASK_GENERATION_INTERVAL);
+  
+  log("Recurring task generation service initialized");
+}
+
 (async () => {
   const server = await registerRoutes(app);
   
@@ -135,6 +178,9 @@ function generateSecurePassword(): string {
   
   // Initialize WebSocket manager
   wsManager.init(server);
+
+  // Initialize recurring task generation service
+  initializeRecurringTaskService();
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

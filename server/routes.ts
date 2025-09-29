@@ -811,6 +811,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Recurring task routes
+  app.get("/api/tasks/recurring", authenticate, enforcePasswordChange, requirePermission('view_all_tasks'), async (req, res) => {
+    try {
+      const recurringTasks = await storage.getRecurringTasks();
+      res.json(recurringTasks);
+    } catch (error) {
+      console.error("Get recurring tasks error:", error);
+      res.status(500).json({ message: "Failed to fetch recurring tasks" });
+    }
+  });
+
+  app.get("/api/tasks/recurring/:id/instances", authenticate, enforcePasswordChange, requirePermission('view_all_tasks'), async (req, res) => {
+    try {
+      const parentTaskId = parseInt(req.params.id);
+      const instances = await storage.getTasksByParent(parentTaskId);
+      res.json(instances);
+    } catch (error) {
+      console.error("Get recurring task instances error:", error);
+      res.status(500).json({ message: "Failed to fetch recurring task instances" });
+    }
+  });
+
+  app.post("/api/tasks/recurring/generate", authenticate, enforcePasswordChange, requirePermission('create_task'), async (req, res) => {
+    try {
+      const generatedTasks = await storage.generateRecurringTaskInstances();
+      
+      // Send notifications for each generated task
+      for (const task of generatedTasks) {
+        try {
+          if (task.assignedTo) {
+            await sendTaskNotification(task.title, task.assignedTo, "New recurring task created");
+          }
+          
+          // Send real-time notification
+          wsManager.broadcast({
+            type: 'task_created',
+            data: {
+              taskId: task.id,
+              taskTitle: task.title,
+              assignedTo: task.assignedTo,
+              isRecurring: true
+            }
+          });
+        } catch (notificationError) {
+          console.error('Failed to send recurring task notification:', notificationError);
+        }
+      }
+      
+      res.json({ 
+        message: `Generated ${generatedTasks.length} recurring task instances`,
+        tasks: generatedTasks 
+      });
+    } catch (error) {
+      console.error("Generate recurring tasks error:", error);
+      res.status(500).json({ message: "Failed to generate recurring tasks" });
+    }
+  });
+
   // Material request routes with authorization
   app.get("/api/material-requests", authenticate, enforcePasswordChange, canAccessResource('material'), addUserContext, async (req, res) => {
     try {
