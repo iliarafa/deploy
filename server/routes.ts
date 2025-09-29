@@ -74,6 +74,88 @@ function getShortcutsForRole(role: UserRole): NavShortcutId[] {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
+  // Simple admin creation page
+  app.get("/setup-admin", (req, res) => {
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Admin Setup</title>
+        <style>
+          body { font-family: Arial, sans-serif; max-width: 400px; margin: 100px auto; padding: 20px; }
+          input, button { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; }
+          button { background: #007cba; color: white; cursor: pointer; }
+          .success { color: green; } .error { color: red; }
+        </style>
+      </head>
+      <body>
+        <h2>Create Admin Account</h2>
+        <form id="adminForm">
+          <input type="text" id="username" placeholder="Username (e.g., RAFA)" required>
+          <input type="password" id="password" placeholder="Password (e.g., 190998)" required>
+          <button type="submit">Create Admin Account</button>
+        </form>
+        <div id="result"></div>
+        <script>
+          document.getElementById('adminForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const result = document.getElementById('result');
+            
+            try {
+              const response = await fetch('/create-admin', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username, password})
+              });
+              const data = await response.json();
+              if (response.ok) {
+                result.innerHTML = '<p class="success">✅ ' + data.message + '<br><a href="/">Go to Login</a></p>';
+              } else {
+                result.innerHTML = '<p class="error">❌ ' + data.message + '</p>';
+              }
+            } catch (error) {
+              result.innerHTML = '<p class="error">❌ Error: ' + error.message + '</p>';
+            }
+          };
+        </script>
+      </body>
+      </html>
+    `);
+  });
+
+  // Admin creation handler
+  app.post("/create-admin", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ message: "Username and password required" });
+      }
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ message: `User '${username}' already exists` });
+      }
+      
+      // Create admin user
+      const adminUser = await storage.createUser({
+        username,
+        password,
+        email: `${username}@admin.local`,
+        role: "admin",
+        firstName: username,
+        lastName: "Admin"
+      });
+      
+      res.json({ message: `Admin user '${username}' created successfully! You can now login.` });
+    } catch (error) {
+      console.error("Admin creation error:", error);
+      res.status(500).json({ message: "Failed to create admin user" });
+    }
+  });
 
   // Authentication routes
   app.post("/api/auth/login", async (req, res) => {
