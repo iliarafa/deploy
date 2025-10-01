@@ -677,12 +677,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/tasks", authenticate, enforcePasswordChange, requirePermission('create_task'), async (req, res) => {
     try {
+      console.log("Raw request body:", JSON.stringify(req.body, null, 2));
+      
       // Convert date fields from strings to Date objects if needed
       const taskData = {
         ...req.body,
         startDate: new Date(req.body.startDate),
-        endDate: req.body.endDate ? new Date(req.body.endDate) : undefined
+        endDate: req.body.endDate ? new Date(req.body.endDate) : undefined,
+        nextDueDate: req.body.nextDueDate ? new Date(req.body.nextDueDate) : undefined
       };
+      
+      console.log("Task data after date conversion:", JSON.stringify(taskData, null, 2));
       
       // Auto-assign tasks to the worker who creates them if no assignee is specified
       if (!taskData.assignedTo && req.user?.role === 'worker') {
