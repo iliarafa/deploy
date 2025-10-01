@@ -29,6 +29,38 @@ function normalizeVacancyDates(data: any) {
   return result;
 }
 
+// Calculate next due date for recurring tasks
+function calculateNextDueDate(startDate: Date, recurrenceType: string, recurrenceInterval: number): Date {
+  // Validate interval is a positive integer
+  if (!Number.isInteger(recurrenceInterval) || recurrenceInterval < 1) {
+    throw new Error(`Recurrence interval must be a positive integer, got: ${recurrenceInterval}`);
+  }
+  
+  const nextDate = new Date(startDate);
+  
+  switch (recurrenceType) {
+    case 'daily':
+      nextDate.setDate(nextDate.getDate() + recurrenceInterval);
+      break;
+    case 'weekly':
+      nextDate.setDate(nextDate.getDate() + (7 * recurrenceInterval));
+      break;
+    case 'biweekly':
+      nextDate.setDate(nextDate.getDate() + (14 * recurrenceInterval));
+      break;
+    case 'monthly':
+      nextDate.setMonth(nextDate.getMonth() + recurrenceInterval);
+      break;
+    case 'yearly':
+      nextDate.setFullYear(nextDate.getFullYear() + recurrenceInterval);
+      break;
+    default:
+      throw new Error(`Invalid recurrence type: ${recurrenceType}`);
+  }
+  
+  return nextDate;
+}
+
 import { 
   insertTaskSchema, 
   insertMaterialRequestSchema, 
@@ -681,9 +713,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const taskData = {
         ...req.body,
         startDate: new Date(req.body.startDate),
-        endDate: req.body.endDate ? new Date(req.body.endDate) : undefined,
-        nextDueDate: req.body.nextDueDate ? new Date(req.body.nextDueDate) : undefined
+        endDate: req.body.endDate ? new Date(req.body.endDate) : undefined
       };
+      
+      // Server-side computation of nextDueDate for recurring tasks
+      if (taskData.isRecurringTemplate && taskData.recurrenceType && taskData.recurrenceInterval) {
+        taskData.nextDueDate = calculateNextDueDate(
+          taskData.startDate, 
+          taskData.recurrenceType, 
+          taskData.recurrenceInterval
+        );
+      } else {
+        // Non-recurring tasks or instances shouldn't have nextDueDate
+        delete taskData.nextDueDate;
+      }
       
       // Auto-assign tasks to the worker who creates them if no assignee is specified
       if (!taskData.assignedTo && req.user?.role === 'worker') {
@@ -730,7 +773,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/tasks/:id", authenticate, enforcePasswordChange, requirePermission('edit_task'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const validatedData = insertTaskSchema.partial().parse(req.body);
       
       // Get original task to check for status changes
       const originalTask = await storage.getTask(id);
@@ -738,6 +780,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Task not found" });
       }
       
+      // Prepare update data with date conversion
+      // ALWAYS strip client-supplied nextDueDate to prevent tampering
+      const updateData = {
+        ...req.body,
+        startDate: req.body.startDate ? new Date(req.body.startDate) : undefined,
+        endDate: req.body.endDate ? new Date(req.body.endDate) : undefined
+      };
+      delete updateData.nextDueDate; // Client cannot set nextDueDate directly
+      
+      // Server-side computation of nextDueDate for recurring templates
+      const isRecurringTemplate = updateData.isRecurringTemplate ?? originalTask.isRecurringTemplate;
+      const recurrenceType = updateData.recurrenceType ?? originalTask.recurrenceType;
+      const recurrenceInterval = updateData.recurrenceInterval ?? originalTask.recurrenceInterval;
+      
+      if (isRecurringTemplate && recurrenceType && recurrenceInterval) {
+        const baseDate = updateData.startDate || originalTask.startDate;
+        updateData.nextDueDate = calculateNextDueDate(
+          baseDate, 
+          recurrenceType, 
+          recurrenceInterval
+        );
+      } else if (updateData.isRecurringTemplate === false) {
+        // Explicitly null out nextDueDate when toggling off recurring
+        updateData.nextDueDate = null;
+      }
+      
+      const validatedData = insertTaskSchema.partial().parse(updateData);
       const task = await storage.updateTask(id, validatedData);
       
       // Check if status changed to "in-progress" by a worker
