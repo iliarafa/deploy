@@ -101,9 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Verify password using proper verification
-      const isValidPassword = user.password.includes(':') 
-        ? verifyPassword(password, user.password)
-        : password === user.password; // Temporary fallback for existing demo accounts
+      const isValidPassword = verifyPassword(password, user.password);
       
       if (!isValidPassword) {
         return res.status(401).json({ message: "Invalid username or password" });
@@ -179,9 +177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify current password
-      const isValidPassword = user.password.includes(':') 
-        ? verifyPassword(validatedData.currentPassword, user.password)
-        : validatedData.currentPassword === user.password; // Temporary fallback
+      const isValidPassword = verifyPassword(validatedData.currentPassword, user.password);
 
       if (!isValidPassword) {
         return res.status(400).json({ message: "Current password is incorrect" });
