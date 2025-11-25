@@ -121,10 +121,12 @@ export default function CalendarView({
               const isRecurringTemplate = task.isRecurringTemplate && task.recurrenceType && task.recurrenceType !== 'none';
               const isRecurringInstance = task.parentTaskId && !task.isRecurringTemplate;
               
+              const completedOpacity = task.status === 'completed' ? 'opacity-50' : '';
+              
               return (
                 <div 
                   key={task.id} 
-                  className={`task-element task-animate-enter task-animate-hover ${getCategoryColor(task.category)} ${statusClasses} ${glowClass} text-xs px-2 py-1 rounded truncate cursor-pointer transform-gpu flex items-center gap-1`}
+                  className={`task-element task-animate-enter task-animate-hover ${getCategoryColor(task.category)} ${statusClasses} ${glowClass} ${completedOpacity} text-xs px-2 py-1 rounded truncate cursor-pointer transform-gpu flex items-center gap-1`}
                   data-testid={`task-chip-${task.id}`}
                   style={{ animationDelay: `${index * 0.1}s` }}
                   onClick={(e) => {
@@ -220,11 +222,12 @@ export default function CalendarView({
                       // Determine if task is recurring
                       const isRecurringTemplate = task.isRecurringTemplate && task.recurrenceType && task.recurrenceType !== 'none';
                       const isRecurringInstance = task.parentTaskId && !task.isRecurringTemplate;
+                      const completedOpacity = task.status === 'completed' ? 'opacity-50' : '';
                       
                       return (
                         <div
                           key={task.id}
-                          className={`task-element task-animate-enter task-animate-hover ${getCategoryColor(task.category)} ${statusClasses} ${glowClass} absolute left-1 right-1 z-10 text-xs px-2 py-1 rounded truncate shadow-sm cursor-pointer transform-gpu`}
+                          className={`task-element task-animate-enter task-animate-hover ${getCategoryColor(task.category)} ${statusClasses} ${glowClass} ${completedOpacity} absolute left-1 right-1 z-10 text-xs px-2 py-1 rounded truncate shadow-sm cursor-pointer transform-gpu`}
                           style={{
                             top: `${(new Date(task.startDate).getMinutes() / 60) * 60}px`,
                             animationDelay: `${taskIndex * 0.1}s`
@@ -317,6 +320,7 @@ export default function CalendarView({
                     // Determine if task is recurring
                     const isRecurringTemplate = task.isRecurringTemplate && task.recurrenceType && task.recurrenceType !== 'none';
                     const isRecurringInstance = task.parentTaskId && !task.isRecurringTemplate;
+                    const completedOpacity = task.status === 'completed' ? 'opacity-50' : '';
                     
                     const taskDate = new Date(task.startDate);
                     const taskMinute = taskDate.getMinutes();
@@ -325,7 +329,7 @@ export default function CalendarView({
                     return (
                       <div
                         key={task.id}
-                        className={`task-element task-animate-enter task-animate-hover ${getCategoryColor(task.category)} ${statusClasses} ${glowClass} absolute left-2 right-2 z-10 text-sm px-3 py-2 rounded-lg shadow-sm border border-white/20 cursor-pointer transform-gpu`}
+                        className={`task-element task-animate-enter task-animate-hover ${getCategoryColor(task.category)} ${statusClasses} ${glowClass} ${completedOpacity} absolute left-2 right-2 z-10 text-sm px-3 py-2 rounded-lg shadow-sm border border-white/20 cursor-pointer transform-gpu`}
                         style={{
                           top: `${(offsetFromSlotStart / 30) * 40}px`,
                           animationDelay: `${taskIndex * 0.1}s`
