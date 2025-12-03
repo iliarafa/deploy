@@ -13,7 +13,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import type { UploadResult } from '@uppy/core';
 import { format } from "date-fns";
 
 interface VacancyModalProps {
@@ -64,24 +63,26 @@ export default function VacancyModal({ isOpen, onClose }: VacancyModalProps) {
       setUploadedImages([]);
       onClose();
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      const errorMessage = error?.message || error?.errors?.[0]?.message || "Failed to create vacancy record. Please try again.";
       toast({
         title: "Error",
-        description: "Failed to create vacancy record",
+        description: errorMessage,
         variant: "destructive",
       });
     },
   });
 
   const handleImageUpload = async () => {
-    const { uploadURL } = await apiRequest('POST', '/api/objects/upload');
+    const response = await apiRequest('POST', '/api/objects/upload');
+    const data = await response.json() as { uploadURL: string };
     return {
       method: 'PUT' as const,
-      url: uploadURL,
+      url: data.uploadURL,
     };
   };
 
-  const handleUploadComplete = (result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
+  const handleUploadComplete = (result: { successful: { uploadURL?: string }[] }) => {
     if (result.successful && result.successful.length > 0) {
       const imageUrls = result.successful.map(file => file.uploadURL || '');
       setUploadedImages(prev => [...prev, ...imageUrls.filter(url => url)]);

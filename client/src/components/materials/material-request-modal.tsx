@@ -59,10 +59,11 @@ export default function MaterialRequestModal({ isOpen, onClose }: MaterialReques
       form.reset();
       onClose();
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      const errorMessage = error?.message || error?.errors?.[0]?.message || "Failed to submit material request. Please try again.";
       toast({
         title: "Error",
-        description: "Failed to submit material request",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -226,7 +227,7 @@ export default function MaterialRequestModal({ isOpen, onClose }: MaterialReques
                 <FormItem>
                   <FormLabel>Notes</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Additional requirements or notes..." rows={3} {...field} />
+                    <Textarea placeholder="Additional requirements or notes..." rows={3} {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

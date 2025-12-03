@@ -136,10 +136,11 @@ export default function TaskEditModal({ task, isOpen, onClose }: TaskEditModalPr
       });
       onClose();
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      const errorMessage = error?.message || error?.errors?.[0]?.message || "Failed to update task. Please try again.";
       toast({
         title: "Error",
-        description: "Failed to update task",
+        description: errorMessage,
         variant: "destructive",
       });
     },

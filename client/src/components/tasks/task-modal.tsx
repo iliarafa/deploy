@@ -129,10 +129,11 @@ export default function TaskModal({ isOpen, onClose, prefilledDate, prefilledTim
       form.reset();
       onClose();
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      const errorMessage = error?.message || error?.errors?.[0]?.message || "Failed to create task. Please try again.";
       toast({
         title: "Error",
-        description: "Failed to create task",
+        description: errorMessage,
         variant: "destructive",
       });
     },
