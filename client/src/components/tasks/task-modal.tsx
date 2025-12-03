@@ -66,6 +66,7 @@ export default function TaskModal({ isOpen, onClose, prefilledDate, prefilledTim
       priority: "standard",
       status: "pending",
       location: "",
+      apartmentNumber: "",
       assignedTo: "",
       startDate: getDefaultStartDate(),
       endDate: "",
@@ -145,6 +146,7 @@ export default function TaskModal({ isOpen, onClose, prefilledDate, prefilledTim
         priority: "standard",
         status: "pending",
         location: "",
+        apartmentNumber: "",
         assignedTo: "",
         startDate: defaultStartDate,
         endDate: "",
@@ -359,6 +361,25 @@ export default function TaskModal({ isOpen, onClose, prefilledDate, prefilledTim
                       <SelectItem value="60">Location 60</SelectItem>
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="apartmentNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Apartment Number</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Enter apartment number (e.g., 4A, 201)" 
+                      {...field} 
+                      value={field.value || ""}
+                      data-testid="input-apartment-number"
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

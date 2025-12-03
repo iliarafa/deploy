@@ -53,6 +53,7 @@ export default function TaskEditModal({ task, isOpen, onClose }: TaskEditModalPr
       priority: "standard",
       status: "pending",
       location: "",
+      apartmentNumber: "",
       assignedTo: "",
       startDate: "",
       endDate: "",
@@ -72,6 +73,7 @@ export default function TaskEditModal({ task, isOpen, onClose }: TaskEditModalPr
         priority: task.priority,
         status: task.status,
         location: task.location || "",
+        apartmentNumber: task.apartmentNumber || "",
         assignedTo: task.assignedTo || "",
         startDate: format(new Date(task.startDate), "yyyy-MM-dd'T'HH:mm"),
         endDate: task.endDate ? format(new Date(task.endDate), "yyyy-MM-dd'T'HH:mm") : "",
@@ -285,32 +287,51 @@ export default function TaskEditModal({ task, isOpen, onClose }: TaskEditModalPr
 
                 <FormField
                   control={form.control}
-                  name="assignedTo"
+                  name="apartmentNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Assigned To</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || ""}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-assigned-to">
-                            <SelectValue placeholder="Select team member" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {users.map((user: any) => (
-                            <SelectItem key={user.id} value={user.username}>
-                              {user.firstName && user.lastName 
-                                ? `${user.firstName} ${user.lastName} (${user.username})`
-                                : user.username
-                              }
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormLabel>Apartment Number</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Enter apartment number (e.g., 4A, 201)" 
+                          {...field} 
+                          value={field.value || ""}
+                          data-testid="input-apartment-number"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="assignedTo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assigned To</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-assigned-to">
+                          <SelectValue placeholder="Select team member" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {users.map((user: any) => (
+                          <SelectItem key={user.id} value={user.username}>
+                            {user.firstName && user.lastName 
+                              ? `${user.firstName} ${user.lastName} (${user.username})`
+                              : user.username
+                            }
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField

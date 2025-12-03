@@ -103,6 +103,7 @@ export const tasks = pgTable("tasks", {
   priority: text("priority").notNull().default("standard"),
   status: text("status").notNull().default("pending"),
   location: text("location"),
+  apartmentNumber: text("apartment_number"),
   assignedTo: text("assigned_to"),
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date"),
