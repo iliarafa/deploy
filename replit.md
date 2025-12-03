@@ -103,3 +103,19 @@ Preferred communication style: Simple, everyday language.
 - `npm run db:push`: Database schema migration
 
 The application uses a monorepo structure with shared TypeScript definitions, making it easy to maintain type safety across the full stack. The architecture supports both development and production environments with proper error handling and responsive design.
+
+## Recent Changes
+
+### Production Readiness Enhancements (December 2025)
+- **Security**: `/api/users` endpoint restricted to admin and project manager roles only
+- **Role-Based UI**: Task assignment dropdown hidden from workers, only visible to admins/project managers
+- **Error Handling**: Improved user-friendly error messages across task, material request, and vacancy modals
+- **Testing Support**: Added `data-testid` attributes to key interactive elements (login, tasks page filters/buttons)
+- **Bug Fixes**: Fixed recurrence type enum mismatch (`bi-weekly` now consistent across schema, UI, and backend)
+
+## Security Notes
+
+- **API Authorization**: User roster endpoint requires admin or project manager role
+- **Task Ownership**: `createdBy` field is server-enforced and stripped from client update requests
+- **Role Permissions**: Workers cannot assign tasks to others (UI field hidden)
+- **Authentication**: All protected routes use JWT-based session authentication
