@@ -105,6 +105,7 @@ export const tasks = pgTable("tasks", {
   location: text("location"),
   apartmentNumber: text("apartment_number"),
   assignedTo: text("assigned_to"),
+  createdBy: integer("created_by"), // User ID who created the task
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date"),
   // Recurring task fields

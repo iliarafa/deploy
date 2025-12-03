@@ -713,7 +713,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const taskData = {
         ...req.body,
         startDate: new Date(req.body.startDate),
-        endDate: req.body.endDate ? new Date(req.body.endDate) : undefined
+        endDate: req.body.endDate ? new Date(req.body.endDate) : undefined,
+        createdBy: req.user?.id // Set creator from authenticated user
       };
       
       // Server-side computation of nextDueDate for recurring tasks
@@ -780,14 +781,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Task not found" });
       }
       
+      // Permission check: Admins can edit any task, workers can only edit their own tasks
+      const userRole = req.user?.role;
+      const userId = req.user?.id;
+      if (userRole === 'worker' && originalTask.createdBy !== userId) {
+        return res.status(403).json({ message: "You can only edit tasks you created" });
+      }
+      
       // Prepare update data with date conversion
-      // ALWAYS strip client-supplied nextDueDate to prevent tampering
+      // ALWAYS strip client-supplied nextDueDate and createdBy to prevent tampering
       const updateData = {
         ...req.body,
         startDate: req.body.startDate ? new Date(req.body.startDate) : undefined,
         endDate: req.body.endDate ? new Date(req.body.endDate) : undefined
       };
       delete updateData.nextDueDate; // Client cannot set nextDueDate directly
+      delete updateData.createdBy; // Client cannot change task ownership
       
       // Server-side computation of nextDueDate for recurring templates
       const isRecurringTemplate = updateData.isRecurringTemplate ?? originalTask.isRecurringTemplate;
@@ -870,6 +879,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/tasks/:id", authenticate, enforcePasswordChange, requirePermission('delete_task'), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      
+      // Get the task to check ownership
+      const task = await storage.getTask(id);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
+      // Permission check: Admins can delete any task, workers can only delete their own tasks
+      const userRole = req.user?.role;
+      const userId = req.user?.id;
+      if (userRole === 'worker' && task.createdBy !== userId) {
+        return res.status(403).json({ message: "You can only delete tasks you created" });
+      }
+      
       await storage.deleteTask(id);
       res.status(204).send();
     } catch (error) {
