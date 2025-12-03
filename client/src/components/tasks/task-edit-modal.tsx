@@ -36,12 +36,15 @@ type TaskFormData = z.infer<typeof taskFormSchema>;
 export default function TaskEditModal({ task, isOpen, onClose }: TaskEditModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user: currentUser, isAuthenticated, isLoading: authLoading } = useAuth();
+  
+  // Only admins and project managers can see/assign users
+  const canAssignUsers = currentUser?.role === 'admin' || currentUser?.role === 'project_manager';
 
-  // Fetch users for assignment dropdown
+  // Fetch users for assignment dropdown (only for admins/PMs)
   const { data: users = [] } = useQuery<any[]>({
     queryKey: ["/api/users"],
-    enabled: isOpen && isAuthenticated && !authLoading,
+    enabled: isOpen && isAuthenticated && !authLoading && canAssignUsers,
   });
 
   const form = useForm<TaskFormData>({
@@ -305,33 +308,35 @@ export default function TaskEditModal({ task, isOpen, onClose }: TaskEditModalPr
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="assignedTo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Assigned To</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-assigned-to">
-                          <SelectValue placeholder="Select team member" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {users.map((user: any) => (
-                          <SelectItem key={user.id} value={user.username}>
-                            {user.firstName && user.lastName 
-                              ? `${user.firstName} ${user.lastName} (${user.username})`
-                              : user.username
-                            }
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {canAssignUsers && (
+                <FormField
+                  control={form.control}
+                  name="assignedTo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Assigned To</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-assigned-to">
+                            <SelectValue placeholder="Select team member" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {users.map((user: any) => (
+                            <SelectItem key={user.id} value={user.username}>
+                              {user.firstName && user.lastName 
+                                ? `${user.firstName} ${user.lastName} (${user.username})`
+                                : user.username
+                              }
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField

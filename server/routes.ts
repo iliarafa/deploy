@@ -45,7 +45,7 @@ function calculateNextDueDate(startDate: Date, recurrenceType: string, recurrenc
     case 'weekly':
       nextDate.setDate(nextDate.getDate() + (7 * recurrenceInterval));
       break;
-    case 'biweekly':
+    case 'bi-weekly':
       nextDate.setDate(nextDate.getDate() + (14 * recurrenceInterval));
       break;
     case 'monthly':
@@ -608,8 +608,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Users endpoint for task assignment (accessible by users with task permissions)
-  app.get("/api/users", authenticate, enforcePasswordChange, async (req, res) => {
+  // Users endpoint for task assignment (accessible by admins and project managers only)
+  app.get("/api/users", authenticate, enforcePasswordChange, requireRole('admin', 'project_manager'), async (req, res) => {
     try {
       const users = await storage.getUsers();
       // Remove passwords and return only essential user info for task assignment
