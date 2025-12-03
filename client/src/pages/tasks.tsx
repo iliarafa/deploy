@@ -78,11 +78,12 @@ export default function Tasks() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
+                  data-testid="input-search-tasks"
                 />
               </div>
               
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
+                <SelectTrigger data-testid="select-status-filter">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -94,7 +95,7 @@ export default function Tasks() {
               </Select>
               
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger>
+                <SelectTrigger data-testid="select-category-filter">
                   <SelectValue placeholder="Filter by category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -107,7 +108,7 @@ export default function Tasks() {
                 </SelectContent>
               </Select>
               
-              <Button variant="outline">
+              <Button variant="outline" data-testid="button-export-tasks">
                 Export Tasks
               </Button>
             </div>
@@ -186,6 +187,7 @@ export default function Tasks() {
                             setSelectedTask(task);
                             setIsDetailModalOpen(true);
                           }}
+                          data-testid={`button-task-details-${task.id}`}
                         >
                           Details
                         </Button>
