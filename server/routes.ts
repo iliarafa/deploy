@@ -78,7 +78,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { wsManager } from "./websocket";
-import { sendTaskNotification, sendMaterialRequestNotification, sendEmail, sendTaskStatusChangeNotification } from "./email";
+import { sendTaskNotification, sendMaterialRequestNotification, sendEmail, sendTaskStatusChangeNotification, sendTaskCreatedNotificationToAdmins } from "./email";
 import { 
   authenticate, 
   requirePermission, 
@@ -743,23 +743,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send real-time notification
       wsManager.notifyTaskCreated(task);
       
-      // Send email notification if assignedTo is provided
+      // Get creator info
+      const creator = req.user ? await storage.getUser(req.user.id) : null;
+      const creatorName = creator ? `${creator.firstName || ''} ${creator.lastName || ''}`.trim() || creator.username : 'System';
+      
+      // Send email notification to assigned user if assignedTo is provided
       if (task.assignedTo) {
-        // For now, we'll use the assignedTo name to construct email
-        // In production, you'd want to store team member emails in a database
-        const teamEmails: { [key: string]: string } = {
-          'German': 'german@company.com',
-          'Marcelo': 'marcelo@company.com', 
-          'Luis C': 'luisc@company.com',
-          'Jose': 'jose@company.com',
-          'Miguel': 'miguel@company.com',
-          'Luis G': 'luisg@company.com'
-        };
-        
-        const assignedEmail = teamEmails[task.assignedTo];
-        if (assignedEmail) {
-          await sendTaskNotification(assignedEmail, task.title, 'System');
+        // Get the assigned user's email from the database
+        const assignedUser = await storage.getUserByUsername(task.assignedTo);
+        if (assignedUser?.email) {
+          await sendTaskNotification(assignedUser.email, task.title, creatorName);
         }
+      }
+      
+      // Send email notification to all admins and project managers when any task is created
+      const adminUsers = await storage.getUsersByRole(['admin', 'project_manager']);
+      const adminEmails = adminUsers
+        .filter(u => u.email && u.id !== req.user?.id) // Exclude creator from notification
+        .map(u => u.email as string);
+      
+      if (adminEmails.length > 0) {
+        const startDateStr = task.startDate instanceof Date 
+          ? task.startDate.toLocaleDateString() 
+          : String(task.startDate);
+        await sendTaskCreatedNotificationToAdmins(
+          adminEmails,
+          task.title,
+          task.description,
+          creatorName,
+          task.category,
+          task.priority,
+          startDateStr
+        );
       }
       
       res.status(201).json(task);

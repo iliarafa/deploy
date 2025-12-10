@@ -97,3 +97,35 @@ export async function sendTaskStatusChangeNotification(emails: string[], taskTit
   const results = await Promise.all(promises);
   return results.every(result => result);
 }
+
+export async function sendTaskCreatedNotificationToAdmins(
+  adminEmails: string[], 
+  taskTitle: string, 
+  taskDescription: string | null,
+  creatorName: string,
+  category: string,
+  priority: string,
+  startDate: string
+) {
+  const html = `
+    <h2>New Task Created</h2>
+    <p>A new task has been created by <strong>${creatorName}</strong>:</p>
+    <h3>${taskTitle}</h3>
+    ${taskDescription ? `<p><strong>Description:</strong> ${taskDescription}</p>` : ''}
+    <p><strong>Category:</strong> ${category}</p>
+    <p><strong>Priority:</strong> ${priority}</p>
+    <p><strong>Start Date:</strong> ${startDate}</p>
+    <p>Please check the Deploy app for full details.</p>
+  `;
+  
+  const promises = adminEmails.map(email => sendEmail({
+    to: email,
+    from: process.env.FROM_EMAIL || 'ilias@csrllc.net',
+    subject: `New Task Created: ${taskTitle} by ${creatorName}`,
+    html,
+    text: `New Task Created: ${taskTitle} by ${creatorName}. Category: ${category}, Priority: ${priority}. Check the Deploy app for details.`
+  }));
+  
+  const results = await Promise.all(promises);
+  return results.every(result => result);
+}
