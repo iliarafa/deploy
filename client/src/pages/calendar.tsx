@@ -15,6 +15,7 @@ export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<"month" | "week" | "day">("month");
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [prefilledDate, setPrefilledDate] = useState<Date | undefined>();
   const [prefilledTime, setPrefilledTime] = useState<string | undefined>();
@@ -32,7 +33,7 @@ export default function Calendar() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral dark:bg-slate-900">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <Header />
       <MobileNav />
       
@@ -46,15 +47,17 @@ export default function Calendar() {
           setView={setView}
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
+          selectedUsers={selectedUsers}
+          setSelectedUsers={setSelectedUsers}
         />
         
-        {/* Calendar and Quick Actions Side-by-Side */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
           <div className="lg:col-span-3">
             <CalendarView
               currentDate={currentDate}
               view={view}
               searchTerm={searchTerm}
+              selectedUsers={selectedUsers}
               onCreateTask={handleCreateTask}
             />
           </div>
