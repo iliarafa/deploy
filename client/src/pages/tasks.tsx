@@ -18,7 +18,7 @@ import { getCategoryColor } from "@/lib/calendar-utils";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
 export default function Tasks() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -124,13 +124,13 @@ export default function Tasks() {
       task.category || "",
       task.priority || "",
       task.status || "",
-      task.startDate || "",
+      task.startDate ? String(task.startDate) : "",
       task.location || "",
       task.assignedTo || "",
     ]);
 
     // Add table using autoTable
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: 42,
       head: [["Title", "Category", "Priority", "Status", "Date", "Location", "Assigned"]],
       body: tableData,
