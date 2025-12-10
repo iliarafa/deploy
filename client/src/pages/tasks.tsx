@@ -8,14 +8,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useQuery } from "@tanstack/react-query";
 import { type Task } from "@shared/schema";
-import { Search, Calendar, MapPin, User, Clock, Plus, Download } from "lucide-react";
+import { Search, Calendar, MapPin, User, Clock, Plus, Download, FileText } from "lucide-react";
 import { useState } from "react";
 import { formatDate } from "@/lib/date-utils";
 import { getCategoryColor } from "@/lib/calendar-utils";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 export default function Tasks() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -84,6 +87,72 @@ export default function Tasks() {
     toast({
       title: "Export successful",
       description: `Exported ${filteredTasks.length} task(s) to CSV.`,
+    });
+  };
+
+  const handleExportPDF = () => {
+    if (filteredTasks.length === 0) {
+      toast({
+        title: "No tasks to export",
+        description: "There are no tasks matching your current filters.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const doc = new jsPDF();
+    
+    // Add title
+    doc.setFontSize(18);
+    doc.text("Task Report", 14, 22);
+    
+    // Add date
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+    
+    // Add filter info
+    let filterText = "Filters: ";
+    if (statusFilter !== "all") filterText += `Status: ${statusFilter}, `;
+    if (categoryFilter !== "all") filterText += `Category: ${categoryFilter}, `;
+    if (searchTerm) filterText += `Search: "${searchTerm}"`;
+    if (filterText === "Filters: ") filterText = "Filters: None";
+    doc.text(filterText, 14, 36);
+
+    // Prepare table data
+    const tableData = filteredTasks.map(task => [
+      task.title || "",
+      task.category || "",
+      task.priority || "",
+      task.status || "",
+      task.startDate || "",
+      task.location || "",
+      task.assignedTo || "",
+    ]);
+
+    // Add table using autoTable
+    (doc as any).autoTable({
+      startY: 42,
+      head: [["Title", "Category", "Priority", "Status", "Date", "Location", "Assigned"]],
+      body: tableData,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [59, 130, 246] },
+      alternateRowStyles: { fillColor: [245, 247, 250] },
+      columnStyles: {
+        0: { cellWidth: 40 },
+        1: { cellWidth: 22 },
+        2: { cellWidth: 18 },
+        3: { cellWidth: 20 },
+        4: { cellWidth: 22 },
+        5: { cellWidth: 30 },
+        6: { cellWidth: 25 },
+      },
+    });
+
+    doc.save(`tasks_report_${new Date().toISOString().split("T")[0]}.pdf`);
+
+    toast({
+      title: "PDF exported",
+      description: `Exported ${filteredTasks.length} task(s) to PDF.`,
     });
   };
 
@@ -156,10 +225,24 @@ export default function Tasks() {
                 </SelectContent>
               </Select>
               
-              <Button variant="outline" data-testid="button-export-tasks" onClick={handleExportTasks}>
-                <Download className="w-4 h-4 mr-2" />
-                Export Tasks
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" data-testid="button-export-tasks">
+                    <Download className="w-4 h-4 mr-2" />
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={handleExportTasks} data-testid="button-export-csv">
+                    <Download className="w-4 h-4 mr-2" />
+                    Export as CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportPDF} data-testid="button-export-pdf">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Export as PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </CardContent>
         </Card>
