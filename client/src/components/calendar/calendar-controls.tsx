@@ -159,7 +159,7 @@ export default function CalendarControls({
                 variant="ghost"
                 size="sm"
                 onClick={() => setLayoutMode("calendar")}
-                className={`h-7 px-2.5 text-xs font-medium transition-all gap-1.5
+                className={`h-7 px-2 sm:px-2.5 text-xs font-medium transition-all gap-1
                   ${layoutMode === "calendar" 
                     ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-slate-200 shadow-sm' 
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
@@ -167,13 +167,13 @@ export default function CalendarControls({
                 data-testid="button-layout-calendar"
               >
                 <Calendar className="w-3.5 h-3.5" />
-                Calendar
+                <span className="hidden sm:inline">Calendar</span>
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setLayoutMode("timeline")}
-                className={`h-7 px-2.5 text-xs font-medium transition-all gap-1.5
+                className={`h-7 px-2 sm:px-2.5 text-xs font-medium transition-all gap-1
                   ${layoutMode === "timeline" 
                     ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-slate-200 shadow-sm' 
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
@@ -181,7 +181,7 @@ export default function CalendarControls({
                 data-testid="button-layout-timeline"
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
-                Timeline
+                <span className="hidden sm:inline">Timeline</span>
               </Button>
             </div>
             
@@ -200,11 +200,11 @@ export default function CalendarControls({
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className={`h-8 gap-2 border-slate-200 dark:border-slate-600 
+                  className={`h-8 gap-1 sm:gap-2 border-slate-200 dark:border-slate-600 
                     ${selectedUsers.length > 0 ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700' : ''}`}
                 >
                   <Users className="w-3.5 h-3.5" />
-                  <span className="text-xs font-medium">Filter by User</span>
+                  <span className="hidden sm:inline text-xs font-medium">Filter by User</span>
                   {selectedUsers.length > 0 && (
                     <Badge variant="secondary" className="h-4 px-1.5 text-[10px] bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300">
                       {selectedUsers.length}

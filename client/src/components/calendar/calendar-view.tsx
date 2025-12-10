@@ -519,10 +519,10 @@ export default function CalendarView({
 
   const renderTimelineView = () => {
     const tasksForDate = getTasksForDate(currentDate);
-    const usersWithTasks = uniqueUsers.length > 0 ? uniqueUsers : ["No assigned tasks"];
+    const usersWithTasks = uniqueUsers.length > 0 ? uniqueUsers : [];
     
     return (
-      <div className="overflow-x-auto">
+      <div>
         <div className="text-center border-b border-slate-200 dark:border-slate-700 pb-4 mb-4">
           <div className="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-1">
             {format(currentDate, 'EEEE, MMMM d, yyyy')}
@@ -532,93 +532,168 @@ export default function CalendarView({
           </div>
         </div>
         
-        <div className="min-w-[900px]">
-          <div className="flex border-b border-slate-200 dark:border-slate-700">
-            <div className="w-32 flex-shrink-0 p-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase bg-slate-50 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700">
-              Team Member
-            </div>
-            {timeSlots.map((slot, index) => (
-              <div 
-                key={slot}
-                className="flex-1 min-w-[60px] p-2 text-center text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase bg-slate-50 dark:bg-slate-800 border-r border-slate-100 dark:border-slate-700"
-              >
-                {slot}
+        <div className="hidden md:block overflow-x-auto">
+          <div className="min-w-[720px]">
+            <div className="flex border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-800 z-10">
+              <div className="w-28 flex-shrink-0 p-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase bg-slate-50 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700">
+                Team
               </div>
-            ))}
-          </div>
-          
-          {usersWithTasks.map((user) => {
-            const userTasks = user === "No assigned tasks" ? [] : getTasksForUserAndDate(user, currentDate);
+              {timeSlots.map((slot) => (
+                <div 
+                  key={slot}
+                  className="flex-1 min-w-[48px] p-1.5 text-center text-[9px] font-semibold text-slate-500 dark:text-slate-400 uppercase bg-slate-50 dark:bg-slate-800 border-r border-slate-100 dark:border-slate-700"
+                >
+                  {slot.replace(' AM', 'a').replace(' PM', 'p')}
+                </div>
+              ))}
+            </div>
             
-            const taskPositions: { task: Task; startPos: number; width: number }[] = userTasks.map(task => {
-              const startPos = getTimePosition(task.startDate);
-              const durationHours = getTaskDurationHours(task);
-              const endPos = Math.min(startPos + durationHours, timeSlots.length);
-              const width = Math.max(0.5, endPos - startPos);
-              return { task, startPos, width };
-            });
+            {usersWithTasks.map((user) => {
+              const userTasks = getTasksForUserAndDate(user, currentDate);
+              
+              const taskPositions: { task: Task; startPos: number; width: number }[] = userTasks.map(task => {
+                const startPos = getTimePosition(task.startDate);
+                const durationHours = getTaskDurationHours(task);
+                const endPos = Math.min(startPos + durationHours, timeSlots.length);
+                const width = Math.max(0.5, endPos - startPos);
+                return { task, startPos, width };
+              });
 
-            return (
-              <div key={user} className="flex border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
-                <div className="w-32 flex-shrink-0 p-2 border-r border-slate-200 dark:border-slate-700 flex items-center gap-2">
-                  {user !== "No assigned tasks" && (
+              return (
+                <div key={user} className="flex border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
+                  <div className="w-28 flex-shrink-0 p-2 border-r border-slate-200 dark:border-slate-700 flex items-center gap-1.5">
+                    <Avatar className="h-5 w-5 flex-shrink-0">
+                      <AvatarFallback className={`${getUserColor(user)} text-white text-[8px]`}>
+                        {getUserInitials(user)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300 truncate">
+                      {user.split(' ')[0]}
+                    </span>
+                  </div>
+                  
+                  <div className="flex-1 flex relative min-h-[44px]">
+                    {timeSlots.map((_, slotIndex) => (
+                      <div 
+                        key={slotIndex}
+                        className="flex-1 min-w-[48px] border-r border-slate-100 dark:border-slate-700"
+                      />
+                    ))}
+                    
+                    {taskPositions.map(({ task, startPos, width: durationWidth }) => {
+                      const categoryColorClasses = getCategoryColorPastel(task.category);
+                      const widthPercent = (durationWidth / timeSlots.length) * 100;
+                      const left = (startPos / timeSlots.length) * 100;
+                      
+                      return (
+                        <div
+                          key={task.id}
+                          className={`absolute top-1 bottom-1 ${categoryColorClasses} rounded-md px-1.5 py-0.5 cursor-pointer hover:shadow-md transition-shadow overflow-hidden`}
+                          style={{ 
+                            left: `${left}%`, 
+                            width: `${widthPercent}%`,
+                            minWidth: '36px'
+                          }}
+                          onClick={(e) => handleTaskClick(task, e)}
+                          data-testid={`timeline-task-${task.id}`}
+                        >
+                          <div className="text-[9px] font-medium truncate">
+                            {task.title}
+                          </div>
+                          <div className="text-[8px] opacity-70 truncate">
+                            {formatTime(new Date(task.startDate))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        
+        <div className="md:hidden space-y-3">
+          {usersWithTasks.length === 0 ? (
+            <div className="p-6 text-center text-slate-500 dark:text-slate-400">
+              <p className="text-sm">No tasks with assigned users for this date</p>
+            </div>
+          ) : (
+            usersWithTasks.map((user) => {
+              const userTasks = getTasksForUserAndDate(user, currentDate);
+              
+              return (
+                <div key={user} className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                  <div className="bg-slate-50 dark:bg-slate-800 px-3 py-2 flex items-center gap-2 border-b border-slate-200 dark:border-slate-700">
                     <Avatar className="h-6 w-6 flex-shrink-0">
                       <AvatarFallback className={`${getUserColor(user)} text-white text-[9px]`}>
                         {getUserInitials(user)}
                       </AvatarFallback>
                     </Avatar>
-                  )}
-                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">
-                    {user}
-                  </span>
-                </div>
-                
-                <div className="flex-1 flex relative min-h-[50px]">
-                  {timeSlots.map((_, slotIndex) => (
-                    <div 
-                      key={slotIndex}
-                      className="flex-1 min-w-[60px] border-r border-slate-100 dark:border-slate-700"
-                    />
-                  ))}
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      {user}
+                    </span>
+                    <Badge variant="secondary" className="ml-auto text-[10px]">
+                      {userTasks.length} task{userTasks.length !== 1 ? 's' : ''}
+                    </Badge>
+                  </div>
                   
-                  {taskPositions.map(({ task, startPos, width: durationWidth }, index) => {
-                    const categoryColorClasses = getCategoryColorPastel(task.category);
-                    const widthPercent = (durationWidth / timeSlots.length) * 100;
-                    const left = (startPos / timeSlots.length) * 100;
-                    
-                    return (
-                      <div
-                        key={task.id}
-                        className={`absolute top-1 bottom-1 ${categoryColorClasses} rounded-md px-2 py-1 cursor-pointer hover:shadow-md transition-shadow overflow-hidden`}
-                        style={{ 
-                          left: `${left}%`, 
-                          width: `${widthPercent}%`,
-                          minWidth: '40px'
-                        }}
-                        onClick={(e) => handleTaskClick(task, e)}
-                        data-testid={`timeline-task-${task.id}`}
-                      >
-                        <div className="text-[10px] font-medium truncate">
-                          {task.title}
-                        </div>
-                        <div className="text-[9px] opacity-70 truncate">
-                          {formatTime(new Date(task.startDate))}
-                        </div>
+                  <div className="divide-y divide-slate-100 dark:divide-slate-700">
+                    {userTasks.length === 0 ? (
+                      <div className="p-3 text-center text-xs text-slate-400">
+                        No tasks scheduled
                       </div>
-                    );
-                  })}
+                    ) : (
+                      userTasks.map((task) => {
+                        const categoryColorClasses = getCategoryColorPastel(task.category);
+                        return (
+                          <div
+                            key={task.id}
+                            className={`p-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors`}
+                            onClick={(e) => handleTaskClick(task, e)}
+                            data-testid={`timeline-task-mobile-${task.id}`}
+                          >
+                            <div className="flex items-start gap-2">
+                              <div className={`w-1 h-full min-h-[32px] rounded-full ${categoryColorClasses.includes('emerald') ? 'bg-emerald-400' : categoryColorClasses.includes('blue') ? 'bg-blue-400' : categoryColorClasses.includes('amber') ? 'bg-amber-400' : categoryColorClasses.includes('yellow') ? 'bg-yellow-400' : categoryColorClasses.includes('rose') ? 'bg-rose-400' : 'bg-slate-400'}`} />
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
+                                  {task.title}
+                                </div>
+                                <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                  <Clock className="w-3 h-3" />
+                                  <span>{formatTime(new Date(task.startDate))}</span>
+                                  {task.endDate && (
+                                    <span>- {formatTime(new Date(task.endDate))}</span>
+                                  )}
+                                </div>
+                                {task.location && (
+                                  <div className="flex items-center gap-1 mt-1 text-xs text-slate-400">
+                                    <MapPin className="w-3 h-3" />
+                                    <span className="truncate">{task.location}</span>
+                                  </div>
+                                )}
+                              </div>
+                              <Badge variant="outline" className="text-[10px] capitalize flex-shrink-0">
+                                {task.category}
+                              </Badge>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-          
-          {uniqueUsers.length === 0 && (
-            <div className="p-8 text-center text-slate-500 dark:text-slate-400">
-              <p className="text-sm">No tasks with assigned users for this date</p>
-              <p className="text-xs mt-1">Tasks need to have an assigned team member to appear in the timeline view</p>
-            </div>
+              );
+            })
           )}
         </div>
+        
+        {uniqueUsers.length === 0 && (
+          <div className="p-8 text-center text-slate-500 dark:text-slate-400">
+            <p className="text-sm">No tasks with assigned users for this date</p>
+            <p className="text-xs mt-1">Tasks need to have an assigned team member to appear in the timeline view</p>
+          </div>
+        )}
       </div>
     );
   };
