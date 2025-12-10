@@ -10,11 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { type Task } from "@shared/schema";
-import { Search, Calendar, MapPin, User, Clock, Plus } from "lucide-react";
+import { Search, Calendar, MapPin, User, Clock, Plus, Download } from "lucide-react";
 import { useState } from "react";
 import { formatDate } from "@/lib/date-utils";
 import { getCategoryColor } from "@/lib/calendar-utils";
 import { useAuth } from "@/contexts/auth-context";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Tasks() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -24,6 +25,7 @@ export default function Tasks() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { hasPermission, isLoading: authLoading } = useAuth();
+  const { toast } = useToast();
 
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
@@ -38,6 +40,52 @@ export default function Tasks() {
     
     return matchesSearch && matchesStatus && matchesCategory;
   });
+
+  const handleExportTasks = () => {
+    if (filteredTasks.length === 0) {
+      toast({
+        title: "No tasks to export",
+        description: "There are no tasks matching your current filters.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const headers = ["Title", "Description", "Category", "Priority", "Status", "Start Date", "End Date", "Location", "Assigned To", "Apartment"];
+    const csvRows = [headers.join(",")];
+
+    filteredTasks.forEach(task => {
+      const row = [
+        `"${(task.title || "").replace(/"/g, '""')}"`,
+        `"${(task.description || "").replace(/"/g, '""')}"`,
+        task.category || "",
+        task.priority || "",
+        task.status || "",
+        task.startDate || "",
+        task.endDate || "",
+        `"${(task.location || "").replace(/"/g, '""')}"`,
+        task.assignedTo || "",
+        task.apartmentNumber || "",
+      ];
+      csvRows.push(row.join(","));
+    });
+
+    const csvContent = csvRows.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `tasks_export_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Export successful",
+      description: `Exported ${filteredTasks.length} task(s) to CSV.`,
+    });
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -108,7 +156,8 @@ export default function Tasks() {
                 </SelectContent>
               </Select>
               
-              <Button variant="outline" data-testid="button-export-tasks">
+              <Button variant="outline" data-testid="button-export-tasks" onClick={handleExportTasks}>
+                <Download className="w-4 h-4 mr-2" />
                 Export Tasks
               </Button>
             </div>
