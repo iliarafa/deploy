@@ -482,17 +482,27 @@ export default function CalendarView({
 
   const uniqueUsers = useMemo(() => {
     const users = new Set<string>();
+    let hasUnassigned = false;
     filteredTasks.forEach(task => {
       if (task.assignedTo) {
         users.add(task.assignedTo);
+      } else {
+        hasUnassigned = true;
       }
     });
-    return Array.from(users).sort();
+    const sortedUsers = Array.from(users).sort();
+    if (hasUnassigned) {
+      sortedUsers.push("Unassigned");
+    }
+    return sortedUsers;
   }, [filteredTasks]);
 
   const getTasksForUserAndDate = (user: string, date: Date) => {
     return filteredTasks.filter(task => {
       const taskDate = new Date(task.startDate);
+      if (user === "Unassigned") {
+        return !task.assignedTo && isSameDay(taskDate, date);
+      }
       return task.assignedTo === user && isSameDay(taskDate, date);
     }).sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
   };
@@ -715,9 +725,9 @@ export default function CalendarView({
       <Card className="mb-6 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl shadow-sm">
         <CardContent className="pt-6">
           {layoutMode === "timeline" ? (
-            <ScrollArea className="h-[600px]">
+            <div className="max-h-[600px] overflow-y-auto">
               {renderTimelineView()}
-            </ScrollArea>
+            </div>
           ) : (
             <>
               {view === "month" && (
