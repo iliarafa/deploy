@@ -1,0 +1,43 @@
+Goal: Refactor the existing Calendar component to support a high-density schedule for a team of 5 users. The current UI is too cluttered and uses harsh colors. I need a modern, clean, "SaaS-style" (like Linear or Notion) UI update.
+
+Tech Stack: React, Tailwind CSS, Lucide React (for icons), date-fns.
+
+Key Features & Requirements:
+
+Mock Data Generation:
+
+Create a utility to generate mock tasks for 5 distinct users (assign each user a name and an avatar/initials).
+
+Populate the calendar heavily (5-10 items per day) to test density.
+
+Visual Overhaul (The "Clean" Look):
+
+Color Palette: Replace the solid red blocks with soft pastel backgrounds (e.g., bg-red-100 text-red-700, bg-blue-100 text-blue-700). Only use saturated colors for "Critical" status tags.
+
+Typography: Use a clean sans-serif. Make the date number (e.g., "1st") subtle and place it in the top-right of the cell.
+
+Borders: Use subtle grays (border-gray-200) and add slight rounded corners (rounded-lg) to the calendar container.
+
+Handling High Density (Month View):
+
+Limit Items: In the grid cell, strictly show only the first 3 items.
+
+Overflow: If a day has more than 3 items, show a small, clickable badge that says +4 more....
+
+Truncation: Ensure text truncates with an ellipsis (...) instead of breaking the layout.
+
+Interaction (The "Drawer" Pattern):
+
+Action: When a user clicks on a specific Day Cell (or the "+ more" badge), do NOT navigate away.
+
+Result: Open a "Slide-over" panel (Drawer) on the right side of the screen.
+
+Drawer Content: This panel should show the full timeline for that specific day, listing every task with full details (Time, Assignee Avatar, Title, Status).
+
+Multi-User Features:
+
+Avatars: Add small circular avatars (or colored circles with initials) to the task bars in the calendar view so we can see who owns the task.
+
+Filters: Add a toolbar above the calendar with a "Filter by User" dropdown. Allowing me to toggle distinct users on/off to declutter the view.
+
+Please start by setting up the updated grid layout and the mock data generator.
