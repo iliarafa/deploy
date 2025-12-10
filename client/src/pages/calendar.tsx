@@ -16,6 +16,7 @@ export default function Calendar() {
   const [view, setView] = useState<"month" | "week" | "day">("month");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [layoutMode, setLayoutMode] = useState<"calendar" | "timeline">("calendar");
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [prefilledDate, setPrefilledDate] = useState<Date | undefined>();
   const [prefilledTime, setPrefilledTime] = useState<string | undefined>();
@@ -49,6 +50,8 @@ export default function Calendar() {
           setSearchTerm={setSearchTerm}
           selectedUsers={selectedUsers}
           setSelectedUsers={setSelectedUsers}
+          layoutMode={layoutMode}
+          setLayoutMode={setLayoutMode}
         />
         
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
@@ -59,6 +62,7 @@ export default function Calendar() {
               searchTerm={searchTerm}
               selectedUsers={selectedUsers}
               onCreateTask={handleCreateTask}
+              layoutMode={layoutMode}
             />
           </div>
           

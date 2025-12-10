@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronLeft, ChevronRight, Search, Users, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, Users, X, Calendar, LayoutGrid } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -23,6 +23,8 @@ interface CalendarControlsProps {
   setSearchTerm: (term: string) => void;
   selectedUsers: string[];
   setSelectedUsers: (users: string[]) => void;
+  layoutMode: "calendar" | "timeline";
+  setLayoutMode: (mode: "calendar" | "timeline") => void;
 }
 
 const USER_COLORS: Record<string, string> = {
@@ -57,6 +59,8 @@ export default function CalendarControls({
   setSearchTerm,
   selectedUsers,
   setSelectedUsers,
+  layoutMode,
+  setLayoutMode,
 }: CalendarControlsProps) {
   const { data: users = [] } = useQuery<User[]>({
     queryKey: ["/api/users"],
@@ -148,6 +152,37 @@ export default function CalendarControls({
                   {v}
                 </Button>
               ))}
+            </div>
+            
+            <div className="flex bg-slate-100 dark:bg-slate-700 rounded-lg p-0.5">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLayoutMode("calendar")}
+                className={`h-7 px-2.5 text-xs font-medium transition-all gap-1.5
+                  ${layoutMode === "calendar" 
+                    ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-slate-200 shadow-sm' 
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+                  }`}
+                data-testid="button-layout-calendar"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                Calendar
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLayoutMode("timeline")}
+                className={`h-7 px-2.5 text-xs font-medium transition-all gap-1.5
+                  ${layoutMode === "timeline" 
+                    ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-slate-200 shadow-sm' 
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+                  }`}
+                data-testid="button-layout-timeline"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                Timeline
+              </Button>
             </div>
             
             <div className="relative flex-1 lg:flex-initial lg:w-48">

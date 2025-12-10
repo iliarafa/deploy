@@ -18,6 +18,7 @@ interface CalendarViewProps {
   searchTerm: string;
   selectedUsers: string[];
   onCreateTask?: (date: Date, time?: string) => void;
+  layoutMode?: "calendar" | "timeline";
 }
 
 const USER_COLORS: Record<string, string> = {
@@ -48,7 +49,8 @@ export default function CalendarView({
   view, 
   searchTerm,
   selectedUsers,
-  onCreateTask
+  onCreateTask,
+  layoutMode = "calendar"
 }: CalendarViewProps) {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -472,6 +474,155 @@ export default function CalendarView({
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const today = new Date();
 
+  const timeSlots = [
+    "6:00 AM", "7:00 AM", "8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM",
+    "12:00 PM", "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM",
+    "6:00 PM", "7:00 PM", "8:00 PM"
+  ];
+
+  const uniqueUsers = useMemo(() => {
+    const users = new Set<string>();
+    filteredTasks.forEach(task => {
+      if (task.assignedTo) {
+        users.add(task.assignedTo);
+      }
+    });
+    return Array.from(users).sort();
+  }, [filteredTasks]);
+
+  const getTasksForUserAndDate = (user: string, date: Date) => {
+    return filteredTasks.filter(task => {
+      const taskDate = new Date(task.startDate);
+      return task.assignedTo === user && isSameDay(taskDate, date);
+    }).sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+  };
+
+  const getTimePosition = (dateStr: string | Date) => {
+    const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const fractionalHour = hours + minutes / 60;
+    
+    if (fractionalHour < 6) return 0;
+    if (fractionalHour >= 20) return timeSlots.length;
+    return fractionalHour - 6;
+  };
+  
+  const getTaskDurationHours = (task: Task) => {
+    if (task.endDate) {
+      const start = new Date(task.startDate);
+      const end = new Date(task.endDate);
+      return Math.max(0.5, (end.getTime() - start.getTime()) / (1000 * 60 * 60));
+    }
+    return 1;
+  };
+
+  const renderTimelineView = () => {
+    const tasksForDate = getTasksForDate(currentDate);
+    const usersWithTasks = uniqueUsers.length > 0 ? uniqueUsers : ["No assigned tasks"];
+    
+    return (
+      <div className="overflow-x-auto">
+        <div className="text-center border-b border-slate-200 dark:border-slate-700 pb-4 mb-4">
+          <div className="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-1">
+            {format(currentDate, 'EEEE, MMMM d, yyyy')}
+          </div>
+          <div className="text-sm text-slate-500 dark:text-slate-400">
+            Timeline View - {tasksForDate.length} task{tasksForDate.length !== 1 ? 's' : ''} across {uniqueUsers.length} team member{uniqueUsers.length !== 1 ? 's' : ''}
+          </div>
+        </div>
+        
+        <div className="min-w-[900px]">
+          <div className="flex border-b border-slate-200 dark:border-slate-700">
+            <div className="w-32 flex-shrink-0 p-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase bg-slate-50 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700">
+              Team Member
+            </div>
+            {timeSlots.map((slot, index) => (
+              <div 
+                key={slot}
+                className="flex-1 min-w-[60px] p-2 text-center text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase bg-slate-50 dark:bg-slate-800 border-r border-slate-100 dark:border-slate-700"
+              >
+                {slot}
+              </div>
+            ))}
+          </div>
+          
+          {usersWithTasks.map((user) => {
+            const userTasks = user === "No assigned tasks" ? [] : getTasksForUserAndDate(user, currentDate);
+            
+            const taskPositions: { task: Task; startPos: number; width: number }[] = userTasks.map(task => {
+              const startPos = getTimePosition(task.startDate);
+              const durationHours = getTaskDurationHours(task);
+              const endPos = Math.min(startPos + durationHours, timeSlots.length);
+              const width = Math.max(0.5, endPos - startPos);
+              return { task, startPos, width };
+            });
+
+            return (
+              <div key={user} className="flex border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
+                <div className="w-32 flex-shrink-0 p-2 border-r border-slate-200 dark:border-slate-700 flex items-center gap-2">
+                  {user !== "No assigned tasks" && (
+                    <Avatar className="h-6 w-6 flex-shrink-0">
+                      <AvatarFallback className={`${getUserColor(user)} text-white text-[9px]`}>
+                        {getUserInitials(user)}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">
+                    {user}
+                  </span>
+                </div>
+                
+                <div className="flex-1 flex relative min-h-[50px]">
+                  {timeSlots.map((_, slotIndex) => (
+                    <div 
+                      key={slotIndex}
+                      className="flex-1 min-w-[60px] border-r border-slate-100 dark:border-slate-700"
+                    />
+                  ))}
+                  
+                  {taskPositions.map(({ task, startPos, width: durationWidth }, index) => {
+                    const categoryColorClasses = getCategoryColorPastel(task.category);
+                    const widthPercent = (durationWidth / timeSlots.length) * 100;
+                    const left = (startPos / timeSlots.length) * 100;
+                    
+                    return (
+                      <div
+                        key={task.id}
+                        className={`absolute top-1 bottom-1 ${categoryColorClasses} rounded-md px-2 py-1 cursor-pointer hover:shadow-md transition-shadow overflow-hidden`}
+                        style={{ 
+                          left: `${left}%`, 
+                          width: `${widthPercent}%`,
+                          minWidth: '40px'
+                        }}
+                        onClick={(e) => handleTaskClick(task, e)}
+                        data-testid={`timeline-task-${task.id}`}
+                      >
+                        <div className="text-[10px] font-medium truncate">
+                          {task.title}
+                        </div>
+                        <div className="text-[9px] opacity-70 truncate">
+                          {formatTime(new Date(task.startDate))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+          
+          {uniqueUsers.length === 0 && (
+            <div className="p-8 text-center text-slate-500 dark:text-slate-400">
+              <p className="text-sm">No tasks with assigned users for this date</p>
+              <p className="text-xs mt-1">Tasks need to have an assigned team member to appear in the timeline view</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   if (isLoading) {
     return (
       <Card className="mb-6 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl">
@@ -488,64 +639,72 @@ export default function CalendarView({
     <>
       <Card className="mb-6 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl shadow-sm">
         <CardContent className="pt-6">
-          {view === "month" && (
+          {layoutMode === "timeline" ? (
+            <ScrollArea className="h-[600px]">
+              {renderTimelineView()}
+            </ScrollArea>
+          ) : (
             <>
-              <div className="grid grid-cols-7 gap-1 md:gap-2 mb-2">
-                {weekDays.map(day => (
-                  <div key={day} className="text-center text-xs font-semibold text-slate-500 dark:text-slate-400 py-2 uppercase tracking-wide">
-                    {day}
-                  </div>
-                ))}
-              </div>
-              <div className="grid grid-cols-7 gap-1 md:gap-2">
-                {renderMonthView()}
-              </div>
-            </>
-          )}
-
-          {view === "week" && (
-            <>
-              <div className="flex border-b border-slate-200 dark:border-slate-700 mb-2">
-                <div className="w-16 md:w-20 text-[10px] text-slate-500 dark:text-slate-400 p-2 text-right border-r border-slate-100 dark:border-slate-700 font-medium uppercase">
-                  Time
-                </div>
-                {getWeekDates(getStartOfWeek(currentDate)).map((date, index) => {
-                  const isToday = isSameDay(date, today);
-                  const dayName = weekDays[date.getDay()];
-                  
-                  return (
-                    <div 
-                      key={index} 
-                      className={`flex-1 text-center p-2 border-r border-slate-100 dark:border-slate-700 
-                        ${isToday ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
-                    >
-                      <div className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase">{dayName}</div>
-                      <div className={`text-lg font-semibold ${isToday ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'}`}>
-                        {date.getDate()}
+              {view === "month" && (
+                <>
+                  <div className="grid grid-cols-7 gap-1 md:gap-2 mb-2">
+                    {weekDays.map(day => (
+                      <div key={day} className="text-center text-xs font-semibold text-slate-500 dark:text-slate-400 py-2 uppercase tracking-wide">
+                        {day}
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <ScrollArea className="h-[500px]">
-                {renderWeekView()}
-              </ScrollArea>
-            </>
-          )}
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-7 gap-1 md:gap-2">
+                    {renderMonthView()}
+                  </div>
+                </>
+              )}
 
-          {view === "day" && (
-            <>
-              <div className="text-center border-b border-slate-200 dark:border-slate-700 pb-4 mb-4">
-                <div className="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-1">
-                  {format(currentDate, 'EEEE, MMMM d, yyyy')}
-                </div>
-                <div className="text-sm text-slate-500 dark:text-slate-400">
-                  {getTasksForDate(currentDate).length} task{getTasksForDate(currentDate).length !== 1 ? 's' : ''} scheduled
-                </div>
-              </div>
-              <ScrollArea className="h-[600px]">
-                {renderDayView()}
-              </ScrollArea>
+              {view === "week" && (
+                <>
+                  <div className="flex border-b border-slate-200 dark:border-slate-700 mb-2">
+                    <div className="w-16 md:w-20 text-[10px] text-slate-500 dark:text-slate-400 p-2 text-right border-r border-slate-100 dark:border-slate-700 font-medium uppercase">
+                      Time
+                    </div>
+                    {getWeekDates(getStartOfWeek(currentDate)).map((date, index) => {
+                      const isToday = isSameDay(date, today);
+                      const dayName = weekDays[date.getDay()];
+                      
+                      return (
+                        <div 
+                          key={index} 
+                          className={`flex-1 text-center p-2 border-r border-slate-100 dark:border-slate-700 
+                            ${isToday ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                        >
+                          <div className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase">{dayName}</div>
+                          <div className={`text-lg font-semibold ${isToday ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                            {date.getDate()}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <ScrollArea className="h-[500px]">
+                    {renderWeekView()}
+                  </ScrollArea>
+                </>
+              )}
+
+              {view === "day" && (
+                <>
+                  <div className="text-center border-b border-slate-200 dark:border-slate-700 pb-4 mb-4">
+                    <div className="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-1">
+                      {format(currentDate, 'EEEE, MMMM d, yyyy')}
+                    </div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400">
+                      {getTasksForDate(currentDate).length} task{getTasksForDate(currentDate).length !== 1 ? 's' : ''} scheduled
+                    </div>
+                  </div>
+                  <ScrollArea className="h-[600px]">
+                    {renderDayView()}
+                  </ScrollArea>
+                </>
+              )}
             </>
           )}
         </CardContent>
