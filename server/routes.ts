@@ -816,9 +816,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           usernameLower.includes(assignedToLower)
         );
         
+        // Debug logging
+        console.log('[PERMISSION DEBUG] Task update attempt:', {
+          taskId: id,
+          taskAssignedTo: originalTask.assignedTo,
+          taskCreatedBy: originalTask.createdBy,
+          currentUserId: userId,
+          currentUsername: currentUser?.username,
+          currentFirstName: currentUser?.firstName,
+          assignedToLower,
+          usernameLower,
+          firstNameLower,
+          isCreator,
+          isAssignee
+        });
+        
         if (!isCreator && !isAssignee) {
+          console.log('[PERMISSION DEBUG] DENIED - worker cannot edit this task');
           return res.status(403).json({ message: "You can only edit tasks you created or are assigned to" });
         }
+        console.log('[PERMISSION DEBUG] ALLOWED - worker can edit this task');
       }
       
       // Prepare update data with date conversion
