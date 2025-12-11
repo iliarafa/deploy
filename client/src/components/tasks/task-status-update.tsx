@@ -42,10 +42,11 @@ export default function TaskStatusUpdate({ task, compact = false }: TaskStatusUp
         description: `Task status changed to ${selectedStatus}`,
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      const errorMessage = error?.message || "Could not update task status";
       toast({
         title: "Update Failed",
-        description: "Could not update task status",
+        description: errorMessage,
         variant: "destructive",
       });
       setSelectedStatus(task.status); // Reset to original status
