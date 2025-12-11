@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { type Task } from "@shared/schema";
-import { Calendar, MapPin, User, Clock, X, Trash2, Edit } from "lucide-react";
+import { Calendar, MapPin, User, Clock, X, Trash2, Edit, Building } from "lucide-react";
 import { formatDate } from "@/lib/date-utils";
 import { getCategoryColor } from "@/lib/calendar-utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -156,6 +156,16 @@ export default function TaskDetailModal({ task, isOpen, onClose }: TaskDetailMod
                   <div>
                     <span className="font-medium">Location</span>
                     <p className="text-sm text-gray-600">{task.location}</p>
+                  </div>
+                </div>
+              )}
+
+              {task.apartmentNumber && (
+                <div className="flex items-center gap-2">
+                  <Building className="w-4 h-4 text-gray-400" />
+                  <div>
+                    <span className="font-medium">Apartment</span>
+                    <p className="text-sm text-gray-600">{task.apartmentNumber}</p>
                   </div>
                 </div>
               )}
