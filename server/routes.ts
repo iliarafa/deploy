@@ -796,11 +796,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Task not found" });
       }
       
-      // Permission check: Admins can edit any task, workers can only edit their own tasks
+      // Permission check: Admins/PMs can edit any task, workers can only edit tasks they created OR are assigned to
       const userRole = req.user?.role;
       const userId = req.user?.id;
-      if (userRole === 'worker' && originalTask.createdBy !== userId) {
-        return res.status(403).json({ message: "You can only edit tasks you created" });
+      if (userRole === 'worker') {
+        const currentUser = await storage.getUser(userId!);
+        const workerName = currentUser?.firstName && currentUser?.lastName 
+          ? `${currentUser.firstName} ${currentUser.lastName}`.toLowerCase()
+          : currentUser?.username?.toLowerCase() || '';
+        const assignedToLower = originalTask.assignedTo?.toLowerCase() || '';
+        const isCreator = originalTask.createdBy === userId;
+        const isAssignee = assignedToLower === workerName || 
+                          assignedToLower === currentUser?.username?.toLowerCase() ||
+                          assignedToLower === currentUser?.firstName?.toLowerCase();
+        
+        if (!isCreator && !isAssignee) {
+          return res.status(403).json({ message: "You can only edit tasks you created or are assigned to" });
+        }
       }
       
       // Prepare update data with date conversion
