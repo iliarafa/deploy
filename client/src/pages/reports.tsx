@@ -1,14 +1,27 @@
+import { useState } from "react";
 import Header from "@/components/layout/header";
 import MobileNav from "@/components/layout/mobile-nav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useQuery } from "@tanstack/react-query";
 import { type Task, type MaterialRequest } from "@shared/schema";
-import { Calendar, Package, CheckCircle, AlertCircle, Clock, TrendingUp, Download } from "lucide-react";
+import { Calendar, Package, CheckCircle, AlertCircle, Download, FileText, FileSpreadsheet } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function Reports() {
+  const { toast } = useToast();
+  const [isExporting, setIsExporting] = useState(false);
+
   const { data: tasks = [] } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
   });
@@ -48,6 +61,189 @@ export default function Reports() {
   const completionRate = taskStats.total > 0 ? (taskStats.completed / taskStats.total) * 100 : 0;
   const materialDeliveryRate = materialStats.total > 0 ? (materialStats.delivered / materialStats.total) * 100 : 0;
 
+  const handleExportCSV = () => {
+    setIsExporting(true);
+    try {
+      const headers = ["ID", "Title", "Category", "Priority", "Status", "Location", "Apartment", "Assigned To", "Start Date", "End Date"];
+      const taskRows = tasks.map(task => [
+        task.id,
+        task.title,
+        task.category,
+        task.priority,
+        task.status,
+        task.location || "",
+        task.apartmentNumber || "",
+        task.assignedTo || "",
+        new Date(task.startDate).toLocaleDateString(),
+        task.endDate ? new Date(task.endDate).toLocaleDateString() : ""
+      ]);
+
+      const materialHeaders = ["ID", "Material Type", "Description", "Quantity", "Unit", "Status", "Priority", "Delivery Location", "Delivery Date"];
+      const materialRows = materialRequests.map(mr => [
+        mr.id,
+        mr.materialType,
+        mr.description,
+        mr.quantity,
+        mr.unit,
+        mr.status,
+        mr.priority,
+        mr.deliveryLocation,
+        mr.deliveryDate ? new Date(mr.deliveryDate).toLocaleDateString() : ""
+      ]);
+
+      let csvContent = "TASKS REPORT\n";
+      csvContent += headers.join(",") + "\n";
+      taskRows.forEach(row => {
+        csvContent += row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",") + "\n";
+      });
+
+      csvContent += "\n\nMATERIAL REQUESTS REPORT\n";
+      csvContent += materialHeaders.join(",") + "\n";
+      materialRows.forEach(row => {
+        csvContent += row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",") + "\n";
+      });
+
+      csvContent += "\n\nSUMMARY STATISTICS\n";
+      csvContent += `Total Tasks,${taskStats.total}\n`;
+      csvContent += `Completed Tasks,${taskStats.completed}\n`;
+      csvContent += `In Progress Tasks,${taskStats.inProgress}\n`;
+      csvContent += `Pending Tasks,${taskStats.pending}\n`;
+      csvContent += `Completion Rate,${completionRate.toFixed(1)}%\n`;
+      csvContent += `\nTotal Material Requests,${materialStats.total}\n`;
+      csvContent += `Delivered,${materialStats.delivered}\n`;
+      csvContent += `In Transit,${materialStats.inTransit}\n`;
+      csvContent += `Pending Materials,${materialStats.pending}\n`;
+      csvContent += `Delivery Rate,${materialDeliveryRate.toFixed(1)}%\n`;
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `reports_${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+
+      toast({
+        title: "Export Successful",
+        description: "CSV report has been downloaded",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to generate CSV report",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportPDF = () => {
+    setIsExporting(true);
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      
+      doc.setFontSize(20);
+      doc.text("Reports & Analytics", pageWidth / 2, 20, { align: "center" });
+      
+      doc.setFontSize(12);
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth / 2, 28, { align: "center" });
+
+      doc.setFontSize(14);
+      doc.text("Summary Statistics", 14, 42);
+      
+      autoTable(doc, {
+        startY: 48,
+        head: [["Metric", "Value"]],
+        body: [
+          ["Total Tasks", taskStats.total.toString()],
+          ["Completed Tasks", taskStats.completed.toString()],
+          ["In Progress Tasks", taskStats.inProgress.toString()],
+          ["Pending Tasks", taskStats.pending.toString()],
+          ["Completion Rate", `${completionRate.toFixed(1)}%`],
+          ["", ""],
+          ["Total Material Requests", materialStats.total.toString()],
+          ["Delivered", materialStats.delivered.toString()],
+          ["In Transit", materialStats.inTransit.toString()],
+          ["Pending Materials", materialStats.pending.toString()],
+          ["Delivery Rate", `${materialDeliveryRate.toFixed(1)}%`],
+        ],
+        theme: "striped",
+        headStyles: { fillColor: [59, 130, 246] },
+      });
+
+      let currentY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15;
+
+      doc.setFontSize(14);
+      doc.text("Tasks", 14, currentY);
+      
+      autoTable(doc, {
+        startY: currentY + 6,
+        head: [["Title", "Category", "Priority", "Status", "Location", "Assigned To"]],
+        body: tasks.map(task => [
+          task.title,
+          task.category,
+          task.priority,
+          task.status,
+          task.location || "-",
+          task.assignedTo || "-"
+        ]),
+        theme: "striped",
+        headStyles: { fillColor: [59, 130, 246] },
+        styles: { fontSize: 9 },
+        columnStyles: {
+          0: { cellWidth: 40 },
+          1: { cellWidth: 25 },
+          2: { cellWidth: 22 },
+          3: { cellWidth: 25 },
+          4: { cellWidth: 30 },
+          5: { cellWidth: 30 },
+        },
+      });
+
+      currentY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15;
+
+      if (currentY > 250) {
+        doc.addPage();
+        currentY = 20;
+      }
+
+      doc.setFontSize(14);
+      doc.text("Material Requests", 14, currentY);
+      
+      autoTable(doc, {
+        startY: currentY + 6,
+        head: [["Material Type", "Description", "Qty", "Unit", "Status", "Priority"]],
+        body: materialRequests.map(mr => [
+          mr.materialType,
+          mr.description.substring(0, 30) + (mr.description.length > 30 ? "..." : ""),
+          mr.quantity.toString(),
+          mr.unit,
+          mr.status,
+          mr.priority
+        ]),
+        theme: "striped",
+        headStyles: { fillColor: [59, 130, 246] },
+        styles: { fontSize: 9 },
+      });
+
+      doc.save(`reports_${new Date().toISOString().split('T')[0]}.pdf`);
+
+      toast({
+        title: "Export Successful",
+        description: "PDF report has been downloaded",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to generate PDF report",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-neutral">
       <Header />
@@ -56,10 +252,24 @@ export default function Reports() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mb-20 md:mb-0">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-4 md:mb-0">Reports & Analytics</h1>
-          <Button>
-            <Download className="w-4 h-4 mr-2" />
-            Export All Reports
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button disabled={isExporting} data-testid="button-export-reports">
+                <Download className="w-4 h-4 mr-2" />
+                {isExporting ? "Exporting..." : "Export All Reports"}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportCSV} data-testid="menu-export-csv">
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Export as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPDF} data-testid="menu-export-pdf">
+                <FileText className="w-4 h-4 mr-2" />
+                Export as PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Overview Cards */}
