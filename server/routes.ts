@@ -801,14 +801,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user?.id;
       if (userRole === 'worker') {
         const currentUser = await storage.getUser(userId!);
-        const workerName = currentUser?.firstName && currentUser?.lastName 
-          ? `${currentUser.firstName} ${currentUser.lastName}`.toLowerCase()
-          : currentUser?.username?.toLowerCase() || '';
-        const assignedToLower = originalTask.assignedTo?.toLowerCase() || '';
+        const assignedToLower = originalTask.assignedTo?.toLowerCase().trim() || '';
+        const usernameLower = currentUser?.username?.toLowerCase().trim() || '';
+        const firstNameLower = currentUser?.firstName?.toLowerCase().trim() || '';
+        const lastNameLower = currentUser?.lastName?.toLowerCase().trim() || '';
+        const fullName = firstNameLower && lastNameLower ? `${firstNameLower} ${lastNameLower}` : '';
+        
         const isCreator = originalTask.createdBy === userId;
-        const isAssignee = assignedToLower === workerName || 
-                          assignedToLower === currentUser?.username?.toLowerCase() ||
-                          assignedToLower === currentUser?.firstName?.toLowerCase();
+        const isAssignee = assignedToLower && (
+          assignedToLower === usernameLower ||
+          assignedToLower === firstNameLower ||
+          assignedToLower === fullName ||
+          assignedToLower.includes(usernameLower) ||
+          usernameLower.includes(assignedToLower)
+        );
         
         if (!isCreator && !isAssignee) {
           return res.status(403).json({ message: "You can only edit tasks you created or are assigned to" });
