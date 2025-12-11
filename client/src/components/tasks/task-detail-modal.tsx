@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { type Task } from "@shared/schema";
-import { Calendar, MapPin, User, Clock, X, Trash2, Edit, Building } from "lucide-react";
+import { Calendar, MapPin, User, Clock, Trash2, Edit, Building } from "lucide-react";
 import { formatDate } from "@/lib/date-utils";
 import { getCategoryColor } from "@/lib/calendar-utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -76,12 +76,7 @@ export default function TaskDetailModal({ task, isOpen, onClose }: TaskDetailMod
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span>{task.title}</span>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="w-4 h-4" />
-            </Button>
-          </DialogTitle>
+          <DialogTitle>{task.title}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
