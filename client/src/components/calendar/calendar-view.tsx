@@ -734,10 +734,44 @@ export default function CalendarView({
     );
   }
 
+  // Get unique workers for the legend
+  const workerLegendData = useMemo(() => {
+    if (!isAdminView) return [];
+    const workerNames = Array.from(new Set(tasks.map(t => t.assignedTo).filter(Boolean) as string[]));
+    return workerNames.map(name => ({
+      name,
+      color: getWorkerSolidColor(name)
+    })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [tasks, isAdminView]);
+
   return (
     <>
       <Card className="mb-6 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl shadow-sm">
         <CardContent className="pt-6">
+          {/* Worker Color Legend for Admin View */}
+          {isAdminView && workerLegendData.length > 0 && (
+            <div className="mb-4 pb-4 border-b border-slate-200 dark:border-slate-700">
+              <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wide">
+                Team Members
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {workerLegendData.map(({ name, color }) => (
+                  <div 
+                    key={name} 
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-slate-50 dark:bg-slate-700/50 text-xs"
+                  >
+                    <div className={`w-3 h-3 rounded-full ${color}`} />
+                    <span className="text-slate-700 dark:text-slate-300 capitalize">{name}</span>
+                  </div>
+                ))}
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-slate-50 dark:bg-slate-700/50 text-xs">
+                  <div className="w-3 h-3 rounded-full bg-slate-500" />
+                  <span className="text-slate-700 dark:text-slate-300">Unassigned</span>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {layoutMode === "timeline" ? (
             <div className="max-h-[600px] overflow-y-auto">
               {renderTimelineView()}
