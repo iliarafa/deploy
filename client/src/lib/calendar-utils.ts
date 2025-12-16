@@ -85,3 +85,65 @@ export function getStatusColor(status: string): string {
       return `bg-gray-500 hover:bg-gray-600 text-white shadow-gray-200 hover:shadow-gray-300 hover:scale-105 ${baseClasses}`;
   }
 }
+
+// Worker color palette for admin calendar view - pastel colors for task backgrounds
+const WORKER_COLOR_PALETTE = [
+  { bg: "bg-blue-100 dark:bg-blue-900/40", text: "text-blue-700 dark:text-blue-300", border: "border-blue-300 dark:border-blue-700", solid: "bg-blue-500" },
+  { bg: "bg-green-100 dark:bg-green-900/40", text: "text-green-700 dark:text-green-300", border: "border-green-300 dark:border-green-700", solid: "bg-green-500" },
+  { bg: "bg-purple-100 dark:bg-purple-900/40", text: "text-purple-700 dark:text-purple-300", border: "border-purple-300 dark:border-purple-700", solid: "bg-purple-500" },
+  { bg: "bg-orange-100 dark:bg-orange-900/40", text: "text-orange-700 dark:text-orange-300", border: "border-orange-300 dark:border-orange-700", solid: "bg-orange-500" },
+  { bg: "bg-pink-100 dark:bg-pink-900/40", text: "text-pink-700 dark:text-pink-300", border: "border-pink-300 dark:border-pink-700", solid: "bg-pink-500" },
+  { bg: "bg-cyan-100 dark:bg-cyan-900/40", text: "text-cyan-700 dark:text-cyan-300", border: "border-cyan-300 dark:border-cyan-700", solid: "bg-cyan-500" },
+  { bg: "bg-indigo-100 dark:bg-indigo-900/40", text: "text-indigo-700 dark:text-indigo-300", border: "border-indigo-300 dark:border-indigo-700", solid: "bg-indigo-500" },
+  { bg: "bg-teal-100 dark:bg-teal-900/40", text: "text-teal-700 dark:text-teal-300", border: "border-teal-300 dark:border-teal-700", solid: "bg-teal-500" },
+  { bg: "bg-red-100 dark:bg-red-900/40", text: "text-red-700 dark:text-red-300", border: "border-red-300 dark:border-red-700", solid: "bg-red-500" },
+  { bg: "bg-amber-100 dark:bg-amber-900/40", text: "text-amber-700 dark:text-amber-300", border: "border-amber-300 dark:border-amber-700", solid: "bg-amber-500" },
+];
+
+// Map to cache worker -> color index for consistency
+const workerColorCache = new Map<string, number>();
+let nextColorIndex = 0;
+
+export function getWorkerColorIndex(workerName: string | null | undefined): number {
+  if (!workerName) return -1;
+  const normalizedName = workerName.toLowerCase().trim();
+  
+  if (workerColorCache.has(normalizedName)) {
+    return workerColorCache.get(normalizedName)!;
+  }
+  
+  const colorIndex = nextColorIndex % WORKER_COLOR_PALETTE.length;
+  workerColorCache.set(normalizedName, colorIndex);
+  nextColorIndex++;
+  return colorIndex;
+}
+
+export function getWorkerColorPastel(workerName: string | null | undefined): string {
+  const baseClasses = "transition-all duration-200 ease-in-out border";
+  const colorIndex = getWorkerColorIndex(workerName);
+  
+  if (colorIndex === -1) {
+    return `bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 ${baseClasses}`;
+  }
+  
+  const colors = WORKER_COLOR_PALETTE[colorIndex];
+  return `${colors.bg} ${colors.text} ${colors.border} hover:opacity-80 ${baseClasses}`;
+}
+
+export function getWorkerSolidColor(workerName: string | null | undefined): string {
+  const colorIndex = getWorkerColorIndex(workerName);
+  if (colorIndex === -1) return "bg-slate-500";
+  return WORKER_COLOR_PALETTE[colorIndex].solid;
+}
+
+export function getAllWorkerColors(): { name: string; colorIndex: number; colors: typeof WORKER_COLOR_PALETTE[0] }[] {
+  const result: { name: string; colorIndex: number; colors: typeof WORKER_COLOR_PALETTE[0] }[] = [];
+  workerColorCache.forEach((colorIndex, name) => {
+    result.push({ name, colorIndex, colors: WORKER_COLOR_PALETTE[colorIndex] });
+  });
+  return result.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function initializeWorkerColors(workerNames: string[]): void {
+  workerNames.forEach(name => getWorkerColorIndex(name));
+}
