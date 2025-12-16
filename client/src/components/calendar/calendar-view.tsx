@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { type Task } from "@shared/schema";
-import { getDaysInMonth, getFirstDayOfMonth, getCategoryColorPastel, getPriorityBadge } from "@/lib/calendar-utils";
+import { getDaysInMonth, getFirstDayOfMonth, getCategoryColorPastel, getPriorityBadge, getWorkerColorPastel, getWorkerSolidColor, getAllWorkerColors, initializeWorkerColors } from "@/lib/calendar-utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -56,12 +56,21 @@ export default function CalendarView({
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const { isLoading: authLoading } = useAuth();
+  const { isLoading: authLoading, user } = useAuth();
+  const isAdminView = user?.role === 'admin' || user?.role === 'project_manager';
   
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
     enabled: !authLoading,
   });
+
+  // Initialize worker colors when tasks load (for consistent colors across session)
+  useMemo(() => {
+    if (tasks.length > 0 && isAdminView) {
+      const workerNames = Array.from(new Set(tasks.map(t => t.assignedTo).filter(Boolean) as string[]));
+      initializeWorkerColors(workerNames);
+    }
+  }, [tasks, isAdminView]);
 
   const handleTaskClick = (task: Task, e?: MouseEvent) => {
     e?.stopPropagation();
@@ -125,11 +134,16 @@ export default function CalendarView({
     const isCompleted = task.status === 'completed';
     const priorityBadge = getPriorityBadge(task.priority);
     
+    // Use worker-based colors for admin/PM view, category colors for others
+    const chipColorClass = isAdminView 
+      ? getWorkerColorPastel(task.assignedTo)
+      : getCategoryColorPastel(task.category);
+    
     return (
       <div 
         key={task.id}
         onClick={(e) => handleTaskClick(task, e)}
-        className={`${getCategoryColorPastel(task.category)} ${isCompleted ? 'opacity-60' : ''} 
+        className={`${chipColorClass} ${isCompleted ? 'opacity-60' : ''} 
           text-xs px-2 py-1.5 rounded-md cursor-pointer flex items-center gap-1.5 group
           hover:shadow-sm transition-all duration-150`}
         data-testid={`task-chip-${task.id}`}
@@ -137,7 +151,7 @@ export default function CalendarView({
       >
         {task.assignedTo && (
           <Avatar className="h-4 w-4 flex-shrink-0">
-            <AvatarFallback className={`${getUserColor(task.assignedTo)} text-white text-[8px] font-medium`}>
+            <AvatarFallback className={`${isAdminView ? getWorkerSolidColor(task.assignedTo) : getUserColor(task.assignedTo)} text-white text-[8px] font-medium`}>
               {getUserInitials(task.assignedTo)}
             </AvatarFallback>
           </Avatar>
