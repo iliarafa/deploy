@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
-import { type Task } from "@shared/schema";
+import { type Task, type User as SchemaUser } from "@shared/schema";
 import { getDaysInMonth, getFirstDayOfMonth, getCategoryColorPastel, getPriorityBadge, getWorkerColorPastel, getWorkerSolidColor, getAllWorkerColors, initializeWorkerColors } from "@/lib/calendar-utils";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import TaskDetailModal from "@/components/tasks/task-detail-modal";
 import { useState, useMemo, type MouseEvent } from "react";
 import { useAuth } from "@/contexts/auth-context";
-import { Repeat, RotateCcw, Clock, MapPin, User, CheckCircle2 } from "lucide-react";
+import { Repeat, RotateCcw, Clock, MapPin, User as UserIcon, CheckCircle2 } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 
 interface CalendarViewProps {
@@ -64,6 +64,27 @@ export default function CalendarView({
     enabled: !authLoading,
   });
 
+  const { data: users = [] } = useQuery<SchemaUser[]>({
+    queryKey: ["/api/users"],
+    enabled: !authLoading,
+  });
+
+  // Build a mapping from display name to all possible matching values (username, firstName, lastName)
+  const userNameMapping = useMemo(() => {
+    const mapping: Record<string, string[]> = {};
+    users.forEach(u => {
+      const displayName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.username;
+      const matchValues = [
+        displayName.toLowerCase(),
+        u.username.toLowerCase(),
+        (u.firstName || '').toLowerCase(),
+        (u.lastName || '').toLowerCase(),
+      ].filter(Boolean);
+      mapping[displayName] = matchValues;
+    });
+    return mapping;
+  }, [users]);
+
   // Initialize worker colors when tasks load (for consistent colors across session)
   useMemo(() => {
     if (tasks.length > 0 && isAdminView) {
@@ -93,16 +114,21 @@ export default function CalendarView({
       filtered = filtered.filter(task => {
         if (!task.assignedTo) return false;
         const taskAssignee = task.assignedTo.toLowerCase().trim();
-        return selectedUsers.some(user => {
-          const filterUser = user.toLowerCase().trim();
-          // Match if either contains the other (handles partial names, full names, usernames)
-          return taskAssignee.includes(filterUser) || filterUser.includes(taskAssignee);
+        
+        return selectedUsers.some(selectedDisplayName => {
+          // Get all possible match values for this selected user (username, firstName, lastName, displayName)
+          const matchValues = userNameMapping[selectedDisplayName] || [selectedDisplayName.toLowerCase()];
+          
+          // Check if task assignee matches any of these values
+          return matchValues.some(matchValue => 
+            taskAssignee.includes(matchValue) || matchValue.includes(taskAssignee)
+          );
         });
       });
     }
     
     return filtered;
-  }, [tasks, searchTerm, selectedUsers]);
+  }, [tasks, searchTerm, selectedUsers, userNameMapping]);
 
   const getTasksForDate = (date: Date) => {
     return filteredTasks.filter(task => {
@@ -455,7 +481,7 @@ export default function CalendarView({
                             
                             {task.assignedTo && (
                               <span className="flex items-center gap-1">
-                                <User className="w-3 h-3" />
+                                <UserIcon className="w-3 h-3" />
                                 {task.assignedTo}
                               </span>
                             )}
