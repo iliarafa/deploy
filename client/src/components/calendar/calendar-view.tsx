@@ -90,11 +90,15 @@ export default function CalendarView({
     );
     
     if (selectedUsers.length > 0) {
-      filtered = filtered.filter(task => 
-        task.assignedTo && selectedUsers.some(user => 
-          task.assignedTo?.includes(user)
-        )
-      );
+      filtered = filtered.filter(task => {
+        if (!task.assignedTo) return false;
+        const taskAssignee = task.assignedTo.toLowerCase().trim();
+        return selectedUsers.some(user => {
+          const filterUser = user.toLowerCase().trim();
+          // Match if either contains the other (handles partial names, full names, usernames)
+          return taskAssignee.includes(filterUser) || filterUser.includes(taskAssignee);
+        });
+      });
     }
     
     return filtered;
