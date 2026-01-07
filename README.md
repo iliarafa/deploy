@@ -61,7 +61,7 @@ Full-stack property management app with calendar/timeline views, task management
 
 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/deploy.git
+git clone https://github.com/iliarafa/deploy.git
 cd deploy
 ```
 
