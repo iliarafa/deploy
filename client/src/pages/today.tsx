@@ -3,8 +3,8 @@ import MobileNav from "@/components/layout/mobile-nav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
-import { type Task } from "@shared/schema";
-import { ChevronRight, Clock, MapPin, User, Calendar as CalendarIcon, ArrowRight } from "lucide-react";
+import { type Task, type User } from "@shared/schema";
+import { ChevronRight, Clock, MapPin, User as UserIcon, Calendar as CalendarIcon, ArrowRight } from "lucide-react";
 import { getCategoryColor } from "@/lib/calendar-utils";
 import { formatTime } from "@/lib/date-utils";
 import { useAuth } from "@/contexts/auth-context";
@@ -23,6 +23,18 @@ export default function Today() {
     queryKey: ["/api/tasks"],
     enabled: !authLoading,
   });
+
+  const { data: users = [] } = useQuery<User[]>({
+    queryKey: ["/api/users"],
+    enabled: !authLoading,
+  });
+
+  // Create lookup map from user ID to display name
+  const userLookup = users.reduce((acc, user) => {
+    const displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username;
+    acc[user.id] = displayName;
+    return acc;
+  }, {} as Record<number, string>);
 
   const today = new Date();
   
@@ -142,7 +154,7 @@ export default function Today() {
                               )}
                               {task.assignedTo && (
                                 <div className="flex items-center gap-1">
-                                  <User className="w-3 h-3" />
+                                  <UserIcon className="w-3 h-3" />
                                   <span>{task.assignedTo}</span>
                                 </div>
                               )}
@@ -199,6 +211,12 @@ export default function Today() {
                         <div className="text-sm text-gray-500 dark:text-gray-400">
                           {new Date(task.startDate).toLocaleDateString()} at {formatTime(task.startDate)}
                         </div>
+                        {task.createdBy && userLookup[task.createdBy] && (
+                          <div className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1 mt-0.5">
+                            <UserIcon className="w-3 h-3" />
+                            Created by {userLookup[task.createdBy]}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(task.category)}`}>
