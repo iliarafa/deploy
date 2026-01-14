@@ -272,23 +272,23 @@ export default function AdminPanel() {
           </div>
 
       <Tabs defaultValue="requests" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="requests" data-testid="tab-registration-requests">
-            <Clock className="h-4 w-4 mr-2" />
-            Registration Requests
+        <TabsList className="w-full flex overflow-x-auto">
+          <TabsTrigger value="requests" data-testid="tab-registration-requests" className="flex-1 min-w-0 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-4">
+            <Clock className="h-4 w-4 mr-1 sm:mr-2 flex-shrink-0" />
+            <span className="truncate">Requests</span>
             {(registrationRequests || []).filter((r: UserRegistrationRequest) => r.status === 'pending').length > 0 && (
-              <Badge variant="destructive" className="ml-2">
+              <Badge variant="destructive" className="ml-1 sm:ml-2 flex-shrink-0">
                 {(registrationRequests || []).filter((r: UserRegistrationRequest) => r.status === 'pending').length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="users" data-testid="tab-user-management">
-            <Users className="h-4 w-4 mr-2" />
-            User Management
+          <TabsTrigger value="users" data-testid="tab-user-management" className="flex-1 min-w-0 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-4">
+            <Users className="h-4 w-4 mr-1 sm:mr-2 flex-shrink-0" />
+            <span className="truncate">Users</span>
           </TabsTrigger>
-          <TabsTrigger value="issues" data-testid="tab-issue-management">
-            <AlertTriangle className="h-4 w-4 mr-2" />
-            Issue Management
+          <TabsTrigger value="issues" data-testid="tab-issue-management" className="flex-1 min-w-0 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-4">
+            <AlertTriangle className="h-4 w-4 mr-1 sm:mr-2 flex-shrink-0" />
+            <span className="truncate">Issues</span>
           </TabsTrigger>
         </TabsList>
 
