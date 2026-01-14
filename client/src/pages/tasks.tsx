@@ -12,7 +12,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useQuery } from "@tanstack/react-query";
 import { type Task } from "@shared/schema";
 import { Search, Calendar, MapPin, User, Clock, Plus, Download, FileText } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearch } from "wouter";
 import { formatDate } from "@/lib/date-utils";
 import { getCategoryColor } from "@/lib/calendar-utils";
 import { useAuth } from "@/contexts/auth-context";
@@ -21,9 +22,22 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 export default function Tasks() {
+  const searchParams = useSearch();
+  const urlParams = new URLSearchParams(searchParams);
+  const initialStatus = urlParams.get("status") || "all";
+  
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  
+  // Update filter when URL params change
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams);
+    const urlStatus = params.get("status");
+    if (urlStatus) {
+      setStatusFilter(urlStatus);
+    }
+  }, [searchParams]);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);

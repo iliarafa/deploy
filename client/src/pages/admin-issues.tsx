@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
+import { useSearch } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,12 +51,25 @@ const statusColors = {
 } as const;
 
 export default function AdminIssuesPage() {
+  const searchParams = useSearch();
+  const urlParams = new URLSearchParams(searchParams);
+  const initialUrgency = urlParams.get("urgency") || "all";
+  
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [urgencyFilter, setUrgencyFilter] = useState<string>("all");
+  const [urgencyFilter, setUrgencyFilter] = useState<string>(initialUrgency);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
+  
+  // Update filter when URL params change
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams);
+    const urlUrgency = params.get("urgency");
+    if (urlUrgency) {
+      setUrgencyFilter(urlUrgency);
+    }
+  }, [searchParams]);
 
   // Check if user has access to this page
   if (!user || !["admin", "project_manager"].includes(user.role)) {

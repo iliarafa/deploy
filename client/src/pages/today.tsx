@@ -13,10 +13,11 @@ import MetricCard from "@/components/dashboard/metric-card";
 import PasswordChangeReminder from "@/components/notifications/password-change-reminder";
 import { useState } from "react";
 import TaskDetailModal from "@/components/tasks/task-detail-modal";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { format } from "date-fns";
 
 export default function Today() {
+  const [, setLocation] = useLocation();
   const { user, isLoading: authLoading } = useAuth();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | undefined>();
@@ -117,12 +118,14 @@ export default function Today() {
               subtext="Requires attention"
               icon={FileCheck}
               alert={pendingTasks > 5}
+              onClick={() => setLocation("/tasks?status=pending")}
             />
             <MetricCard
               title="Active Staff"
               value={activeStaff}
               subtext={`${users.filter(u => u.isApproved).length} total approved`}
               icon={Users}
+              onClick={() => setLocation("/staff")}
             />
             <MetricCard
               title="Critical Issues"
@@ -132,12 +135,14 @@ export default function Today() {
               alert={criticalIssues > 0}
               trend={criticalIssues > 0 ? String(criticalIssues) : undefined}
               trendDirection={criticalIssues > 0 ? "down" : undefined}
+              onClick={() => setLocation("/admin/issues?urgency=high")}
             />
             <MetricCard
               title="Vacancies"
               value={activeVacancies.length}
               subtext="Units available"
               icon={Home}
+              onClick={() => setLocation("/vacancies")}
             />
           </div>
         )}
