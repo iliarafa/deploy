@@ -1282,9 +1282,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Vacancy routes
+  // Vacancy routes - GET restricted to admin and project_manager only
   app.get("/api/vacancies", authenticate, enforcePasswordChange, async (req, res) => {
     try {
+      // Only admin and project_manager can view all vacancies
+      if (req.user?.role !== "admin" && req.user?.role !== "project_manager") {
+        return res.status(403).json({ message: "Access denied. Only admins and project managers can view vacancies." });
+      }
       const vacancies = await storage.getVacancies();
       res.json(vacancies);
     } catch (error) {
@@ -1295,6 +1299,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/vacancies/:id", authenticate, enforcePasswordChange, async (req, res) => {
     try {
+      // Only admin and project_manager can view vacancy details
+      if (req.user?.role !== "admin" && req.user?.role !== "project_manager") {
+        return res.status(403).json({ message: "Access denied. Only admins and project managers can view vacancies." });
+      }
       const id = parseInt(req.params.id);
       const vacancy = await storage.getVacancy(id);
       if (!vacancy) {

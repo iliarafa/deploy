@@ -21,16 +21,25 @@ export default function Vacancies() {
   const [, setLocation] = useLocation();
   const [isVacancyModalOpen, setIsVacancyModalOpen] = useState(false);
 
+  // Check if user has permission to view vacancies
+  const canViewVacancies = user?.role === "admin" || user?.role === "project_manager";
+
   // Redirect non-admin/project_manager users
   useEffect(() => {
-    if (!authLoading && user && user.role !== "admin" && user.role !== "project_manager") {
+    if (!authLoading && user && !canViewVacancies) {
       setLocation("/");
     }
-  }, [user, authLoading, setLocation]);
+  }, [user, authLoading, canViewVacancies, setLocation]);
 
   const { data: vacancies = [], isLoading } = useQuery<Vacancy[]>({
     queryKey: ["/api/vacancies"],
+    enabled: !authLoading && canViewVacancies,
   });
+
+  // Don't render anything until we confirm the user has permission
+  if (authLoading || !canViewVacancies) {
+    return null;
+  }
 
   const closeVacancyMutation = useMutation({
     mutationFn: async (vacancyId: number) => {
