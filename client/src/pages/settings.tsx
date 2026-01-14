@@ -256,7 +256,7 @@ export function Settings() {
             <CardHeader>
               <CardTitle>Navigation Shortcuts</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Choose up to 4 shortcuts for your bottom navigation bar.
+                Choose up to 4 shortcuts for your navigation bar (desktop and mobile).
               </p>
             </CardHeader>
             <CardContent className="space-y-4">

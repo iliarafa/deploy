@@ -14,12 +14,26 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { NAV_OPTIONS, getVisibleShortcuts } from "@/lib/nav";
+import { type NavShortcutId } from "@shared/schema";
+import { type UserRole } from "@shared/roles";
+
+interface NavPrefsResponse {
+  navShortcuts: NavShortcutId[];
+}
 
 export default function Header() {
   const [location] = useLocation();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const { user, isAuthenticated, logout, hasPermission } = useAuth();
+  const { user, isAuthenticated, logout, hasPermission, isLoading: authLoading } = useAuth();
+
+  // Fetch user navigation preferences
+  const { data: navPrefs } = useQuery<NavPrefsResponse>({
+    queryKey: ["/api/me/nav-preferences"],
+    enabled: !authLoading && !!user,
+  });
 
   const isActive = (path: string) => {
     if (path === "/" && location === "/") return true;
@@ -27,8 +41,12 @@ export default function Header() {
     return false;
   };
 
-  // Check if user has full navigation access (admin and managers only)
-  const hasFullNavAccess = user && (user.role === 'admin' || user.role === 'project_manager');
+  // Get user's navigation shortcuts with defaults
+  const userShortcuts = Array.isArray(navPrefs?.navShortcuts) ? navPrefs.navShortcuts : [];
+  const visibleShortcuts = user ? getVisibleShortcuts(userShortcuts, user.role as UserRole) : [];
+  
+  // Always start with "Today", then add user's visible shortcuts
+  const navigationItems: NavShortcutId[] = ["today", ...visibleShortcuts];
 
   return (
     <>
@@ -46,104 +64,24 @@ export default function Header() {
               </button>
             </div>
             
-            {/* Role-based Navigation */}
+            {/* User's Navigation Shortcuts */}
             <nav className="hidden md:flex space-x-4">
-              <Link href="/">
-                <span className={`text-sm pb-2 cursor-pointer ${
-                  isActive("/") 
-                    ? "text-primary border-b-2 border-primary" 
-                    : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
-                }`}>
-                  Today
-                </span>
-              </Link>
-              
-              <Link href="/calendar">
-                <span className={`text-sm pb-2 cursor-pointer ${
-                  isActive("/calendar") 
-                    ? "text-primary border-b-2 border-primary" 
-                    : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
-                }`}>
-                  Calendar
-                </span>
-              </Link>
-              
-              {/* Log tab for workers only */}
-              {user && user.role === 'worker' && (
-                <Link href="/log">
-                  <span className={`text-sm pb-2 cursor-pointer ${
-                    isActive("/log") 
-                      ? "text-primary border-b-2 border-primary" 
-                      : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
-                  }`}>
-                    Log
-                  </span>
-                </Link>
-              )}
-              
-              {/* Temporarily hidden - Colab tab for workers and managers */}
-              {false && (
-                <Link href="/colab">
-                  <span 
-                    className={`text-sm pb-2 cursor-pointer ${
-                      isActive("/colab") 
+              {navigationItems.map((shortcutId) => {
+                const option = NAV_OPTIONS[shortcutId];
+                if (!option) return null;
+
+                return (
+                  <Link key={shortcutId} href={option.path}>
+                    <span className={`text-sm pb-2 cursor-pointer ${
+                      isActive(option.path) 
                         ? "text-primary border-b-2 border-primary" 
                         : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
-                    }`}
-                    data-testid="nav-colab"
-                  >
-                    Colab
-                  </span>
-                </Link>
-              )}
-              
-              {hasFullNavAccess && hasPermission('view_all_tasks') && (
-                <Link href="/tasks">
-                  <span className={`text-sm pb-2 cursor-pointer ${
-                    isActive("/tasks") 
-                      ? "text-primary border-b-2 border-primary" 
-                      : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
-                  }`}>
-                    Tasks
-                  </span>
-                </Link>
-              )}
-              
-              {hasFullNavAccess && hasPermission('view_all_materials') && (
-                <Link href="/materials">
-                  <span className={`text-sm pb-2 cursor-pointer ${
-                    isActive("/materials") 
-                      ? "text-primary border-b-2 border-primary" 
-                      : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
-                  }`}>
-                    Mats
-                  </span>
-                </Link>
-              )}
-              
-              {hasFullNavAccess && hasPermission('view_reports') && (
-                <Link href="/reports">
-                  <span className={`text-sm pb-2 cursor-pointer ${
-                    isActive("/reports") 
-                      ? "text-primary border-b-2 border-primary" 
-                      : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
-                  }`}>
-                    Reports
-                  </span>
-                </Link>
-              )}
-              
-              {hasFullNavAccess && (
-                <Link href="/admin">
-                  <span className={`text-sm pb-2 cursor-pointer ${
-                    isActive("/admin") 
-                      ? "text-primary border-b-2 border-primary" 
-                      : "text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
-                  }`}>
-                    Admin
-                  </span>
-                </Link>
-              )}
+                    }`}>
+                      {option.label}
+                    </span>
+                  </Link>
+                );
+              })}
             </nav>
 
             <div className="flex items-center space-x-2">

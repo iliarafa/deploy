@@ -339,10 +339,10 @@ export default function Profile() {
             <CardHeader>
               <CardTitle className="text-xl flex items-center space-x-2">
                 <Navigation className="w-5 h-5" />
-                <span>Bottom Navigation Shortcuts</span>
+                <span>Navigation Shortcuts</span>
               </CardTitle>
               <CardDescription>
-                Customize which shortcuts appear in your mobile navigation bar. You can select up to 4 shortcuts. "Today" is always visible.
+                Customize which shortcuts appear in your navigation bar (desktop and mobile). You can select up to 4 shortcuts. "Today" is always visible.
               </CardDescription>
             </CardHeader>
             <CardContent>
