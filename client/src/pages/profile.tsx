@@ -338,9 +338,10 @@ export default function Profile() {
                   {/* Available Shortcuts */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {getAllowedShortcuts(user.role as UserRole)
-                      .filter(shortcutId => shortcutId !== "today") // Exclude "today" as it's always visible
+                      .filter(shortcutId => shortcutId !== "today" && shortcutId !== "settings") // Exclude "today" (always visible) and "settings" (accessed via header)
                       .map((shortcutId) => {
                         const option = NAV_OPTIONS[shortcutId];
+                        if (!option) return null; // Guard against undefined options
                         const isSelected = selectedShortcuts.includes(shortcutId);
                         const IconComponent = option.icon;
 

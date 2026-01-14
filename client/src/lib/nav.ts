@@ -1,4 +1,4 @@
-import { Calendar, CheckSquare, Package, Shield, FileText, MessageSquare, Home, Clock, AlertTriangle } from "lucide-react";
+import { Calendar, CheckSquare, Package, Shield, FileText, MessageSquare, Home, Clock, AlertTriangle, Settings } from "lucide-react";
 import { type NavShortcutId } from "@shared/schema";
 import { type UserRole } from "@shared/roles";
 
@@ -12,7 +12,8 @@ export const NAV_OPTIONS = {
   vacancies: { id: "vacancies" as const, label: "Vacancies", icon: Home, path: "/vacancies" },
   issues: { id: "issues" as const, label: "Report", icon: AlertTriangle, path: "/issues" },
   admin: { id: "admin" as const, label: "Admin", icon: Shield, path: "/admin" },
-  calendar: { id: "calendar" as const, label: "Calendar", icon: Calendar, path: "/calendar" }
+  calendar: { id: "calendar" as const, label: "Calendar", icon: Calendar, path: "/calendar" },
+  settings: { id: "settings" as const, label: "Settings", icon: Settings, path: "/settings" }
 } as const;
 
 // Role-based access rules
