@@ -193,9 +193,11 @@ export default function Header() {
                         Profile
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem data-testid="menu-settings">
-                      <Settings className="w-4 h-4 mr-2" />
-                      Settings
+                    <DropdownMenuItem data-testid="menu-settings" asChild>
+                      <Link href="/profile">
+                        <Settings className="w-4 h-4 mr-2" />
+                        Settings
+                      </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={logout} data-testid="menu-logout">
