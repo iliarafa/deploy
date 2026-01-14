@@ -3,21 +3,25 @@ import MobileNav from "@/components/layout/mobile-nav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
-import { type Task, type User } from "@shared/schema";
-import { ChevronRight, Clock, MapPin, User as UserIcon, Calendar as CalendarIcon, ArrowRight } from "lucide-react";
+import { type Task, type User, type Issue, type Vacancy } from "@shared/schema";
+import { ChevronRight, Clock, MapPin, User as UserIcon, Calendar as CalendarIcon, ArrowRight, FileCheck, Users, AlertTriangle, Home } from "lucide-react";
 import { getCategoryColor } from "@/lib/calendar-utils";
 import { formatTime } from "@/lib/date-utils";
 import { useAuth } from "@/contexts/auth-context";
 import QuickActions from "@/components/dashboard/quick-actions";
+import MetricCard from "@/components/dashboard/metric-card";
 import PasswordChangeReminder from "@/components/notifications/password-change-reminder";
 import { useState } from "react";
 import TaskDetailModal from "@/components/tasks/task-detail-modal";
 import { Link } from "wouter";
+import { format } from "date-fns";
 
 export default function Today() {
-  const { isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | undefined>();
+
+  const isAdminOrPM = user?.role === "admin" || user?.role === "project_manager";
 
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
@@ -26,7 +30,17 @@ export default function Today() {
 
   const { data: users = [] } = useQuery<User[]>({
     queryKey: ["/api/users"],
-    enabled: !authLoading,
+    enabled: !authLoading && isAdminOrPM,
+  });
+
+  const { data: issues = [] } = useQuery<Issue[]>({
+    queryKey: ["/api/issues"],
+    enabled: !authLoading && isAdminOrPM,
+  });
+
+  const { data: vacancies = [] } = useQuery<Vacancy[]>({
+    queryKey: ["/api/vacancies"],
+    enabled: !authLoading && isAdminOrPM,
   });
 
   // Create lookup map from user ID to display name
@@ -45,8 +59,6 @@ export default function Today() {
   const todaysTasks = tasks.filter(task => {
     const taskStart = new Date(task.startDate);
     const taskEnd = task.endDate ? new Date(task.endDate) : taskStart;
-    
-    // Check if task overlaps with today (handles multi-day tasks)
     return taskStart < dayEnd && taskEnd >= dayStart;
   });
 
@@ -57,7 +69,13 @@ export default function Today() {
       return taskStart >= dayEnd && taskStart < new Date(dayEnd.getTime() + (3 * 24 * 60 * 60 * 1000));
     })
     .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
-    .slice(0, 3);
+    .slice(0, 5);
+
+  // Calculate metrics for admin/PM
+  const pendingTasks = tasks.filter(t => t.status === "pending").length;
+  const activeStaff = users.filter(u => u.isApproved && u.role === "worker").length;
+  const criticalIssues = issues.filter(i => i.urgency === "high" && i.status !== "resolved").length;
+  const activeVacancies = vacancies.filter(v => v.status === "vacant" || v.status === "pending");
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
@@ -70,129 +88,151 @@ export default function Today() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral dark:bg-slate-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
       <Header />
       <MobileNav />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mb-20 md:mb-0">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 mb-20 md:mb-0">
         <PasswordChangeReminder />
         
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2" data-testid="text-greeting">
+        {/* Welcome Section - More Compact */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1" data-testid="text-greeting">
             Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'}!
           </h1>
-          <p className="text-gray-600 dark:text-gray-300" data-testid="text-today-count">
+          <p className="text-gray-500 dark:text-gray-400 text-sm" data-testid="text-today-count">
             {todaysTasks.length === 0 
-              ? "No tasks scheduled for today. Great work staying on top of things!" 
+              ? "No tasks scheduled for today." 
               : `You have ${todaysTasks.length} task${todaysTasks.length === 1 ? '' : 's'} scheduled for today.`
             }
           </p>
         </div>
 
-        {/* Today's Tasks and Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 lg:items-stretch">
-          {/* Today's Tasks */}
-          <div className="lg:col-span-2 flex">
-            <Card className="flex-1 flex flex-col">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="w-5 h-5" />
+        {/* Metrics Row - Admin/PM Only */}
+        {isAdminOrPM && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <MetricCard
+              title="Pending Tasks"
+              value={pendingTasks}
+              subtext="Requires attention"
+              icon={FileCheck}
+              alert={pendingTasks > 5}
+            />
+            <MetricCard
+              title="Active Staff"
+              value={activeStaff}
+              subtext={`${users.filter(u => u.isApproved).length} total approved`}
+              icon={Users}
+            />
+            <MetricCard
+              title="Critical Issues"
+              value={criticalIssues}
+              subtext="High priority"
+              icon={AlertTriangle}
+              alert={criticalIssues > 0}
+              trend={criticalIssues > 0 ? String(criticalIssues) : undefined}
+              trendDirection={criticalIssues > 0 ? "down" : undefined}
+            />
+            <MetricCard
+              title="Vacancies"
+              value={activeVacancies.length}
+              subtext="Units available"
+              icon={Home}
+            />
+          </div>
+        )}
+
+        {/* Main Dashboard Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          {/* Today's Tasks - Takes 2 columns */}
+          <div className="lg:col-span-2">
+            <Card className="bg-white dark:bg-slate-800 shadow-sm border-gray-100 dark:border-slate-700">
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+                  <Clock className="w-5 h-5 text-blue-600" />
                   Today's Tasks
                 </CardTitle>
                 <Link href="/calendar">
-                  <Button variant="outline" size="sm" className="text-sm" data-testid="button-view-calendar">
+                  <Button variant="outline" size="sm" className="text-sm border-gray-200 hover:border-blue-500 hover:text-blue-600" data-testid="button-view-calendar">
                     <CalendarIcon className="w-4 h-4 mr-2" />
-                    View Calendar
+                    Calendar
                   </Button>
                 </Link>
               </CardHeader>
-              <CardContent className="flex-1">
+              <CardContent>
                 {isLoading ? (
                   <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
                     <div className="text-gray-500">Loading tasks...</div>
                   </div>
                 ) : todaysTasks.length === 0 ? (
-                  <div className="text-center py-6">
-                    <Clock className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                    <div className="text-gray-500 mb-1">No tasks scheduled for today</div>
-                    <p className="text-gray-400 text-sm">Take a break or plan ahead for tomorrow!</p>
+                  <div className="text-center py-8">
+                    <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Clock className="w-6 h-6 text-green-500" />
+                    </div>
+                    <div className="text-gray-600 font-medium mb-1">All caught up!</div>
+                    <p className="text-gray-400 text-sm">No tasks scheduled for today</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {todaysTasks.map((task, index) => {
-                      const statusClasses = task.status === 'completed' ? 'task-completed-pulse' :
-                                          task.priority === 'urgent' ? 'task-urgent-shake' : '';
-                      const glowClass = task.status === 'pending' ? 'status-glow-pending' :
-                                      task.status === 'in-progress' ? 'status-glow-progress' :
-                                      task.status === 'completed' ? 'status-glow-completed' : '';
-                      
-                      return (
-                        <div 
-                          key={task.id} 
-                          className={`task-element task-animate-enter task-animate-hover ${statusClasses} ${glowClass} flex items-center p-4 bg-gray-50 dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-600 transition-all duration-300 ease-in-out transform-gpu cursor-pointer`}
-                          style={{ animationDelay: `${index * 0.05}s` }}
-                          onClick={() => handleTaskClick(task)}
-                          data-testid={`today-task-${task.id}`}
-                        >
-                          <div className={`w-4 h-4 rounded-full mr-4 transition-all duration-300 ${getCategoryColor(task.category).replace('text-white', '').replace('bg-', 'bg-').split(' ')[0]}`}></div>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="font-medium text-gray-900 dark:text-white text-lg">{task.title}</h4>
-                              <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                                <Clock className="w-4 h-4 mr-1" />
-                                <span>{formatTime(task.startDate)}</span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-300">
-                              {task.location && (
-                                <div className="flex items-center gap-1">
-                                  <MapPin className="w-3 h-3" />
-                                  <span>{task.location}</span>
-                                </div>
-                              )}
-                              {task.assignedTo && (
-                                <div className="flex items-center gap-1">
-                                  <UserIcon className="w-3 h-3" />
-                                  <span>{task.assignedTo}</span>
-                                </div>
-                              )}
-                              <div className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(task.category)}`}>
-                                {task.category}
-                              </div>
-                              <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                task.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                task.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
-                                'bg-green-100 text-green-800'
-                              }`}>
-                                {task.status.replace('-', ' ')}
-                              </div>
-                            </div>
+                  <div className="space-y-2">
+                    {todaysTasks.slice(0, 5).map((task) => (
+                      <div 
+                        key={task.id} 
+                        className="flex items-center p-3 bg-gray-50 dark:bg-slate-700 rounded-lg border border-gray-100 dark:border-slate-600 hover:border-blue-200 dark:hover:border-blue-500 transition-colors cursor-pointer"
+                        onClick={() => handleTaskClick(task)}
+                        data-testid={`today-task-${task.id}`}
+                      >
+                        <div className={`w-3 h-3 rounded-full mr-3 ${getCategoryColor(task.category).split(' ')[0]}`}></div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium text-gray-900 dark:text-white truncate">{task.title}</h4>
+                            <span className="text-xs text-gray-500 ml-2">{formatTime(task.startDate)}</span>
                           </div>
-                          <ChevronRight className="w-5 h-5 text-gray-400" />
+                          <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                            {task.location && (
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3" />
+                                {task.location}
+                              </span>
+                            )}
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              task.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                              task.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
+                              'bg-green-100 text-green-700'
+                            }`}>
+                              {task.status.replace('-', ' ')}
+                            </span>
+                          </div>
                         </div>
-                      );
-                    })}
+                        <ChevronRight className="w-4 h-4 text-gray-400 ml-2" />
+                      </div>
+                    ))}
+                    {todaysTasks.length > 5 && (
+                      <Link href="/tasks">
+                        <Button variant="ghost" className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                          View all {todaysTasks.length} tasks <ArrowRight className="w-4 h-4 ml-1" />
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                 )}
               </CardContent>
             </Card>
           </div>
           
-          {/* Quick Actions */}
-          <div className="lg:col-span-1 flex">
+          {/* Quick Actions - Right Column */}
+          <div className="lg:col-span-1">
             <QuickActions />
           </div>
         </div>
 
-        {/* Upcoming Tasks Preview */}
+        {/* Schedule Preview - Shows upcoming tasks */}
         {upcomingTasks.length > 0 && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg">Upcoming Tasks</CardTitle>
+          <Card className="bg-white dark:bg-slate-800 shadow-sm border-gray-100 dark:border-slate-700">
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <CardTitle className="text-base text-gray-900 dark:text-white">Upcoming Schedule</CardTitle>
               <Link href="/tasks">
-                <Button variant="ghost" size="sm" className="text-sm" data-testid="button-view-all-tasks">
+                <Button variant="ghost" size="sm" className="text-sm text-blue-600 hover:text-blue-700" data-testid="button-view-all-tasks">
                   View All <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
               </Link>
@@ -202,26 +242,21 @@ export default function Today() {
                 {upcomingTasks.map((task) => (
                   <div 
                     key={task.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600"
+                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700 rounded-lg border border-gray-100 dark:border-slate-600 hover:border-blue-200 transition-colors cursor-pointer"
+                    onClick={() => handleTaskClick(task)}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-3 h-3 rounded-full ${getCategoryColor(task.category).replace('text-white', '').replace('bg-', 'bg-').split(' ')[0]}`}></div>
+                      <div className={`w-2 h-2 rounded-full ${getCategoryColor(task.category).split(' ')[0]}`}></div>
                       <div>
-                        <div className="font-medium text-gray-900 dark:text-white">{task.title}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {new Date(task.startDate).toLocaleDateString()} at {formatTime(task.startDate)}
+                        <div className="font-medium text-gray-900 dark:text-white text-sm">{task.title}</div>
+                        <div className="text-xs text-gray-500">
+                          {format(new Date(task.startDate), "EEE, MMM d")} at {formatTime(task.startDate)}
                         </div>
-                        {task.createdBy && userLookup[task.createdBy] && (
-                          <div className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1 mt-0.5">
-                            <UserIcon className="w-3 h-3" />
-                            Created by {userLookup[task.createdBy]}
-                          </div>
-                        )}
                       </div>
                     </div>
-                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(task.category)}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(task.category)}`}>
                       {task.category}
-                    </div>
+                    </span>
                   </div>
                 ))}
               </div>
