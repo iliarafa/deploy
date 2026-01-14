@@ -51,11 +51,8 @@ export function IssueForm({ onSubmit, isLoading = false }: IssueFormProps) {
 
 
   return (
-    <Card className="w-full max-w-lg mx-auto">
-      <CardHeader>
-        
-      </CardHeader>
-      <CardContent>
+    <Card className="w-full border-gray-200 dark:border-slate-700 shadow-sm">
+      <CardContent className="pt-6">
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
           {/* Issue Description */}
           <div className="space-y-2">
@@ -130,7 +127,7 @@ export function IssueForm({ onSubmit, isLoading = false }: IssueFormProps) {
           {/* Submit Button */}
           <Button 
             type="submit" 
-            className="w-full" 
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
             disabled={isLoading}
             data-testid="button-submit-issue"
           >
