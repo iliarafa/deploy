@@ -591,46 +591,61 @@ export default function AdminPanel() {
               ) : users?.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">No users found</p>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-4">
                   {users?.map((user: User) => (
-                    <div key={user.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-100 dark:border-slate-700 hover:border-blue-200 transition-colors">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                          <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
-                            {(user.firstName?.[0] || user.username[0]).toUpperCase()}
-                          </span>
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-gray-900 dark:text-white truncate" data-testid={`user-username-${user.id}`}>
-                              {user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.username}
-                            </span>
+                    <Card key={user.id} className="transition-all duration-200 hover:shadow-md">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <h3 className="font-semibold" data-testid={`user-username-${user.id}`}>
+                              {user.username}
+                            </h3>
+                            <p className="text-sm text-muted-foreground" data-testid={`user-name-${user.id}`}>
+                              {user.firstName} {user.lastName}
+                            </p>
+                            <p className="text-sm text-muted-foreground" data-testid={`user-email-${user.id}`}>
+                              {user.email}
+                            </p>
+                          </div>
+                          <div className="flex flex-col items-end gap-2">
                             {getRoleBadge(user.role)}
-                            <Badge variant={user.isActive ? "default" : "secondary"} className="text-xs">
+                            <Badge variant={user.isActive ? "default" : "secondary"}>
                               {user.isActive ? "Active" : "Inactive"}
                             </Badge>
                           </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 truncate" data-testid={`user-email-${user.id}`}>
-                            {user.email}
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <strong>Location:</strong> {user.location || 'Not specified'}
+                          </div>
+                          <div>
+                            <strong>Joined:</strong> {formatDate(user.createdAt)}
+                          </div>
+                          <div>
+                            <strong>Last Login:</strong> {formatDate(user.lastLogin)}
+                          </div>
+                          <div>
+                            <strong>Approved:</strong> {user.isApproved ? 'Yes' : 'No'}
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                        
+                        <div className="flex gap-2 mt-4">
                           <Dialog>
                             <DialogTrigger asChild>
                               <Button 
                                 size="sm" 
-                                variant="ghost"
+                                variant="outline"
                                 onClick={() => {
                                   setSelectedUser(user);
                                   setEditUserRole(user.role);
                                   setEditUserActive(user.isActive);
                                 }}
                                 data-testid={`edit-user-${user.id}`}
-                                className="h-8 w-8 p-0 sm:w-auto sm:px-3"
                               >
-                                <Edit className="h-4 w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Edit</span>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
                               </Button>
                             </DialogTrigger>
                             <DialogContent>
@@ -689,12 +704,11 @@ export default function AdminPanel() {
                               <AlertDialogTrigger asChild>
                                 <Button 
                                   size="sm" 
-                                  variant="ghost"
+                                  variant="destructive"
                                   data-testid={`deactivate-user-${user.id}`}
-                                  className="h-8 w-8 p-0 sm:w-auto sm:px-3 text-red-600 hover:text-red-700 hover:bg-red-50"
                                 >
-                                  <UserX className="h-4 w-4 sm:mr-2" />
-                                  <span className="hidden sm:inline">Deactivate</span>
+                                  <UserX className="h-4 w-4 mr-2" />
+                                  Deactivate
                                 </Button>
                               </AlertDialogTrigger>
                               <AlertDialogContent>
@@ -718,8 +732,9 @@ export default function AdminPanel() {
                               </AlertDialogContent>
                             </AlertDialog>
                           )}
-                      </div>
-                    </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               )}
