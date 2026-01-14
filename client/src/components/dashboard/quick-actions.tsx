@@ -1,22 +1,33 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Package, ClipboardCheck, AlertTriangle, Home } from "lucide-react";
+import { Plus, Package, ClipboardCheck, AlertTriangle, Home, ChevronRight, Building } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/auth-context";
 import TaskModal from "@/components/tasks/task-modal";
 import MaterialRequestModal from "@/components/materials/material-request-modal";
 import InspectionModal from "@/components/inspections/inspection-modal";
 import VacancyModal from "@/components/vacancies/vacancy-modal";
+import { type Vacancy } from "@shared/schema";
 
 export default function QuickActions() {
   const [, setLocation] = useLocation();
+  const { isLoading: authLoading } = useAuth();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
   const [isInspectionModalOpen, setIsInspectionModalOpen] = useState(false);
   const [isVacancyModalOpen, setIsVacancyModalOpen] = useState(false);
 
+  const { data: vacancies = [], isLoading: vacanciesLoading } = useQuery<Vacancy[]>({
+    queryKey: ["/api/vacancies"],
+    enabled: !authLoading,
+  });
+
+  const activeVacancies = vacancies.filter(v => v.status === "vacant" || v.status === "pending");
+
   return (
-    <>
+    <div className="space-y-4">
       <Card>
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
@@ -67,6 +78,66 @@ export default function QuickActions() {
         </CardContent>
       </Card>
 
+      {/* Vacancies List Card */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Building className="w-4 h-4" />
+              Vacancies
+            </CardTitle>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-xs h-7 px-2"
+              onClick={() => setLocation("/vacancies")}
+            >
+              View All <ChevronRight className="w-3 h-3 ml-1" />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {vacanciesLoading ? (
+            <div className="text-center py-4">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary mx-auto"></div>
+            </div>
+          ) : activeVacancies.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-3">No active vacancies</p>
+          ) : (
+            <div className="space-y-2">
+              {activeVacancies.slice(0, 5).map((vacancy) => (
+                <button
+                  key={vacancy.id}
+                  type="button"
+                  onClick={() => setLocation("/vacancies")}
+                  className="w-full flex items-center justify-between p-2 rounded-md hover:bg-gray-100 dark:hover:bg-slate-700 cursor-pointer transition-colors text-left"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Home className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{vacancy.property}</p>
+                      <p className="text-xs text-muted-foreground">Apt {vacancy.apartmentNumber}</p>
+                    </div>
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
+                    vacancy.status === "vacant" 
+                      ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" 
+                      : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                  }`}>
+                    {vacancy.status}
+                  </span>
+                </button>
+              ))}
+              {activeVacancies.length > 5 && (
+                <p className="text-xs text-muted-foreground text-center pt-1">
+                  +{activeVacancies.length - 5} more
+                </p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <TaskModal 
         isOpen={isTaskModalOpen} 
         onClose={() => setIsTaskModalOpen(false)} 
@@ -86,6 +157,6 @@ export default function QuickActions() {
         isOpen={isVacancyModalOpen} 
         onClose={() => setIsVacancyModalOpen(false)} 
       />
-    </>
+    </div>
   );
 }
