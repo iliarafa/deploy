@@ -92,12 +92,12 @@ export default function Staff() {
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 mb-20 md:mb-0">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="sm" onClick={() => setLocation("/")}>
+        <div className="mb-6">
+          <Button variant="ghost" size="sm" onClick={() => setLocation("/")} className="mb-3 -ml-2">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
+            Back to Dashboard
           </Button>
-          <div>
+          <div className="w-full">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Active Staff</h1>
             <p className="text-sm text-gray-500">Workers and their current task assignments</p>
           </div>
