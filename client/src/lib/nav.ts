@@ -32,8 +32,8 @@ export const NAV_RULES: Record<NavShortcutId, { allowedRoles: UserRole[]; requir
 // Default navigation preferences by role
 export const DEFAULT_NAV_PREFS: Record<UserRole, NavShortcutId[]> = {
   worker: ["log", "issues", "colab", "calendar"],
-  project_manager: ["tasks", "materials", "issues", "colab"],
-  admin: ["tasks", "materials", "issues", "admin"],
+  project_manager: ["tasks", "materials", "vacancies", "issues"],
+  admin: ["tasks", "vacancies", "issues", "admin"],
   supervisor: ["tasks", "materials", "issues", "calendar"],
   inspector: ["tasks", "materials", "issues", "calendar"],
   client: ["tasks", "calendar", "issues", "colab"]
