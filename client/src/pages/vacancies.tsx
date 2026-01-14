@@ -7,15 +7,26 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { type Vacancy } from "@shared/schema";
 import { Building, MapPin, Calendar, Clock, Home } from "lucide-react";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/auth-context";
+import { useLocation } from "wouter";
 import VacancyModal from "@/components/vacancies/vacancy-modal";
 
 export default function Vacancies() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user, isLoading: authLoading } = useAuth();
+  const [, setLocation] = useLocation();
   const [isVacancyModalOpen, setIsVacancyModalOpen] = useState(false);
+
+  // Redirect non-admin/project_manager users
+  useEffect(() => {
+    if (!authLoading && user && user.role !== "admin" && user.role !== "project_manager") {
+      setLocation("/");
+    }
+  }, [user, authLoading, setLocation]);
 
   const { data: vacancies = [], isLoading } = useQuery<Vacancy[]>({
     queryKey: ["/api/vacancies"],
