@@ -48,25 +48,22 @@ export function getAllowedShortcuts(role: UserRole): NavShortcutId[] {
   ) as NavShortcutId[];
 }
 
-// Helper function to filter and apply defaults to user preferences
+// Helper function to filter user preferences to only allowed shortcuts
+// If user has no preferences set, return role defaults; otherwise respect their choice
 export function getVisibleShortcuts(
   userPrefs: NavShortcutId[], 
-  userRole: UserRole
+  userRole: UserRole,
+  useDefaultsIfEmpty: boolean = true
 ): NavShortcutId[] {
   const allowedShortcuts = getAllowedShortcuts(userRole);
   const filteredPrefs = userPrefs.filter(shortcut => allowedShortcuts.includes(shortcut));
   
-  // If user has fewer than 4 preferences, fill with role defaults
-  if (filteredPrefs.length < 4) {
+  // Only use defaults if user has never set preferences (empty array from fresh account)
+  // Once user actively selects shortcuts, always respect their choice even if fewer than 4
+  if (filteredPrefs.length === 0 && useDefaultsIfEmpty) {
     const defaults = DEFAULT_NAV_PREFS[userRole];
-    const needed = 4 - filteredPrefs.length;
-    const missingDefaults = defaults
-      .filter(defaultShortcut => !filteredPrefs.includes(defaultShortcut))
-      .filter(defaultShortcut => allowedShortcuts.includes(defaultShortcut))
-      .slice(0, needed);
-    
-    return [...filteredPrefs, ...missingDefaults];
+    return defaults.filter(shortcut => allowedShortcuts.includes(shortcut)).slice(0, 4);
   }
   
-  return filteredPrefs.slice(0, 4); // Limit to 4 shortcuts
+  return filteredPrefs.slice(0, 4); // Limit to 4 shortcuts, respect user's choice
 }
