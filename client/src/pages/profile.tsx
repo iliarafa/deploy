@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -30,17 +30,28 @@ export default function Profile() {
   const { user, setUser } = useAuth();
   const { toast } = useToast();
   const [selectedShortcuts, setSelectedShortcuts] = useState<NavShortcutId[]>([]);
+  const [shortcutsInitialized, setShortcutsInitialized] = useState(false);
 
   // Fetch user navigation preferences
   const { data: navPrefs, isLoading: navPrefsLoading } = useQuery({
     queryKey: ["/api/me/nav-preferences"],
     enabled: !!user,
-    onSuccess: (data: { navShortcuts: NavShortcutId[] }) => {
-      // Defensive coding: ensure navShortcuts is always an array
-      const shortcuts = Array.isArray(data?.navShortcuts) ? data.navShortcuts : [];
-      setSelectedShortcuts(shortcuts);
-    }
   });
+
+  // Initialize selectedShortcuts when data loads, applying defaults if empty
+  useEffect(() => {
+    if (navPrefs && user && !shortcutsInitialized) {
+      const shortcuts = Array.isArray(navPrefs?.navShortcuts) ? navPrefs.navShortcuts : [];
+      if (shortcuts.length === 0) {
+        // Apply role-based defaults when user has no saved preferences
+        const defaults = DEFAULT_NAV_PREFS[user.role as UserRole] || [];
+        setSelectedShortcuts(defaults);
+      } else {
+        setSelectedShortcuts(shortcuts);
+      }
+      setShortcutsInitialized(true);
+    }
+  }, [navPrefs, user, shortcutsInitialized]);
 
   const form = useForm<UpdateProfile>({
     resolver: zodResolver(updateProfileSchema),
