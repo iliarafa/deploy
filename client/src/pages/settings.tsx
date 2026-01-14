@@ -88,6 +88,8 @@ export function Settings() {
     },
     onSuccess: (updatedSettings: UserSettings) => {
       queryClient.setQueryData(["/api/me/settings"], updatedSettings);
+      // Also invalidate nav-preferences so MobileNav refreshes
+      queryClient.invalidateQueries({ queryKey: ["/api/me/nav-preferences"] });
       // Sync theme with context if changed
       if (updatedSettings.theme && updatedSettings.theme !== theme) {
         setTheme(updatedSettings.theme as "light" | "dark");
