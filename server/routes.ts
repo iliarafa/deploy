@@ -91,14 +91,15 @@ import { type UserRole } from "@shared/roles";
 import { type NavShortcutId } from "@shared/schema";
 
 // Role-based navigation shortcuts configuration
+// These match the NAV_RULES allowedRoles in client/src/lib/nav.ts
 function getShortcutsForRole(role: UserRole): NavShortcutId[] {
   const roleShortcuts: Record<UserRole, NavShortcutId[]> = {
-    worker: ["log", "issues", "colab", "calendar"],
-    project_manager: ["tasks", "materials", "issues", "colab"],
-    admin: ["tasks", "materials", "issues", "admin"],
-    supervisor: ["tasks", "materials", "issues", "calendar"],
-    inspector: ["tasks", "materials", "issues", "calendar"],
-    client: ["tasks", "calendar", "issues", "colab"]
+    worker: ["today", "log", "colab", "materials", "issues", "calendar", "settings"],
+    project_manager: ["today", "colab", "tasks", "materials", "vacancies", "issues", "calendar", "settings"],
+    admin: ["today", "colab", "tasks", "materials", "vacancies", "issues", "admin", "calendar", "settings"],
+    supervisor: ["today", "colab", "tasks", "materials", "issues", "calendar", "settings"],
+    inspector: ["today", "colab", "tasks", "materials", "issues", "calendar", "settings"],
+    client: ["today", "colab", "tasks", "issues", "calendar", "settings"]
   };
   
   return roleShortcuts[role] || [];
