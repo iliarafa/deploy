@@ -23,7 +23,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { User, Globe, Bell, Monitor, Shield, Key, Save, SettingsIcon, UserCog } from "lucide-react";
+import { User, Globe, Bell, Monitor, Shield, Key, Save, SettingsIcon, UserCog, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import type { UserSettings, UpdateUserSettings } from "@shared/schema";
 import { useAuth } from "@/contexts/auth-context";
 import { useTheme } from "@/contexts/theme-context";
@@ -158,6 +159,14 @@ export function Settings() {
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
+      {/* Back to Dashboard */}
+      <Link href="/">
+        <Button variant="ghost" className="gap-2 text-gray-600 hover:text-gray-900 -ml-2 mb-4">
+          <ArrowLeft className="w-4 h-4" />
+          Back to Dashboard
+        </Button>
+      </Link>
+
       <div className="flex items-center gap-2 mb-6">
         <SettingsIcon className="h-6 w-6" />
         <h1 className="text-3xl font-bold">Settings</h1>
