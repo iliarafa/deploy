@@ -41,7 +41,7 @@ export default function Tasks() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const { hasPermission, isLoading: authLoading } = useAuth();
+  const { hasPermission, isLoading: authLoading, user } = useAuth();
   const { toast } = useToast();
 
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
@@ -49,7 +49,26 @@ export default function Tasks() {
     enabled: !authLoading, // Wait for authentication verification before fetching
   });
 
-  const filteredTasks = tasks.filter(task => {
+  // Filter tasks for workers - they can only see their own tasks
+  const userFilteredTasks = tasks.filter(task => {
+    if (user?.role !== 'worker') return true;
+    if (!task.assignedTo) return false;
+    
+    const taskAssignee = task.assignedTo.toLowerCase().trim();
+    const username = user.username.toLowerCase();
+    const displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim().toLowerCase();
+    const firstName = (user.firstName || '').toLowerCase();
+    const lastName = (user.lastName || '').toLowerCase();
+    
+    return taskAssignee.includes(username) || 
+           taskAssignee.includes(displayName) ||
+           (firstName && taskAssignee.includes(firstName)) ||
+           (lastName && taskAssignee.includes(lastName)) ||
+           username.includes(taskAssignee) ||
+           displayName.includes(taskAssignee);
+  });
+
+  const filteredTasks = userFilteredTasks.filter(task => {
     const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          task.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || task.status === statusFilter;

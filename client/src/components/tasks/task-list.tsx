@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/auth-context";
 import TaskDetailModal from "./task-detail-modal";
 
 export default function TaskList() {
-  const { isLoading: authLoading } = useAuth();
+  const { isLoading: authLoading, user } = useAuth();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
@@ -19,8 +19,27 @@ export default function TaskList() {
     enabled: !authLoading,
   });
 
+  // Filter tasks for workers - they can only see their own tasks
+  const userFilteredTasks = tasks.filter(task => {
+    if (user?.role !== 'worker') return true;
+    if (!task.assignedTo) return false;
+    
+    const taskAssignee = task.assignedTo.toLowerCase().trim();
+    const username = user.username.toLowerCase();
+    const displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim().toLowerCase();
+    const firstName = (user.firstName || '').toLowerCase();
+    const lastName = (user.lastName || '').toLowerCase();
+    
+    return taskAssignee.includes(username) || 
+           taskAssignee.includes(displayName) ||
+           (firstName && taskAssignee.includes(firstName)) ||
+           (lastName && taskAssignee.includes(lastName)) ||
+           username.includes(taskAssignee) ||
+           displayName.includes(taskAssignee);
+  });
+
   const today = new Date();
-  const todaysTasks = tasks.filter(task => {
+  const todaysTasks = userFilteredTasks.filter(task => {
     const taskDate = new Date(task.startDate);
     return taskDate.toDateString() === today.toDateString();
   });

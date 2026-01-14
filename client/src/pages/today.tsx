@@ -57,14 +57,33 @@ export default function Today() {
   const dayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const dayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
   
-  const todaysTasks = tasks.filter(task => {
+  // Filter tasks for workers - they can only see their own tasks
+  const userFilteredTasks = tasks.filter(task => {
+    if (user?.role !== 'worker') return true;
+    if (!task.assignedTo) return false;
+    
+    const taskAssignee = task.assignedTo.toLowerCase().trim();
+    const username = user.username.toLowerCase();
+    const displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim().toLowerCase();
+    const firstName = (user.firstName || '').toLowerCase();
+    const lastName = (user.lastName || '').toLowerCase();
+    
+    return taskAssignee.includes(username) || 
+           taskAssignee.includes(displayName) ||
+           (firstName && taskAssignee.includes(firstName)) ||
+           (lastName && taskAssignee.includes(lastName)) ||
+           username.includes(taskAssignee) ||
+           displayName.includes(taskAssignee);
+  });
+  
+  const todaysTasks = userFilteredTasks.filter(task => {
     const taskStart = new Date(task.startDate);
     const taskEnd = task.endDate ? new Date(task.endDate) : taskStart;
     return taskStart < dayEnd && taskEnd >= dayStart;
   });
 
   // Get upcoming tasks (next 3 days), sorted by start time
-  const upcomingTasks = tasks
+  const upcomingTasks = userFilteredTasks
     .filter(task => {
       const taskStart = new Date(task.startDate);
       return taskStart >= dayEnd && taskStart < new Date(dayEnd.getTime() + (3 * 24 * 60 * 60 * 1000));

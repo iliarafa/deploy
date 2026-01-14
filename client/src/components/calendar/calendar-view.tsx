@@ -104,11 +104,37 @@ export default function CalendarView({
     setIsDrawerOpen(true);
   };
 
+  // Get current user's display name for worker filtering
+  const currentUserDisplayName = useMemo(() => {
+    if (!user) return '';
+    return `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username;
+  }, [user]);
+
   const filteredTasks = useMemo(() => {
     let filtered = tasks.filter(task => 
       task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       task.description?.toLowerCase().includes(searchTerm.toLowerCase())
     );
+    
+    // Workers can only see their own tasks
+    if (user?.role === 'worker') {
+      filtered = filtered.filter(task => {
+        if (!task.assignedTo) return false;
+        const taskAssignee = task.assignedTo.toLowerCase().trim();
+        const username = user.username.toLowerCase();
+        const displayName = currentUserDisplayName.toLowerCase();
+        const firstName = (user.firstName || '').toLowerCase();
+        const lastName = (user.lastName || '').toLowerCase();
+        
+        // Check if task is assigned to this worker
+        return taskAssignee.includes(username) || 
+               taskAssignee.includes(displayName) ||
+               (firstName && taskAssignee.includes(firstName)) ||
+               (lastName && taskAssignee.includes(lastName)) ||
+               username.includes(taskAssignee) ||
+               displayName.includes(taskAssignee);
+      });
+    }
     
     if (selectedUsers.length > 0) {
       filtered = filtered.filter(task => {
@@ -128,7 +154,7 @@ export default function CalendarView({
     }
     
     return filtered;
-  }, [tasks, searchTerm, selectedUsers, userNameMapping]);
+  }, [tasks, searchTerm, selectedUsers, userNameMapping, user, currentUserDisplayName]);
 
   const getTasksForDate = (date: Date) => {
     return filteredTasks.filter(task => {
