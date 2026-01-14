@@ -106,6 +106,12 @@ The application uses a monorepo structure with shared TypeScript definitions, ma
 
 ## Recent Changes
 
+### Quick Notes Feature (January 2026)
+- **Quick Notes**: Floating button accessible from any screen for jotting down immediate thoughts
+- **Note Management**: Create, edit, pin, and delete personal notes via slide-out drawer
+- **Database Integration**: Notes stored in PostgreSQL with user-specific access control
+- **API Endpoints**: Full CRUD operations at `/api/quick-notes`
+
 ### Production Readiness Enhancements (December 2025)
 - **Security**: `/api/users` endpoint restricted to admin and project manager roles only
 - **Role-Based UI**: Task assignment dropdown hidden from workers, only visible to admins/project managers
