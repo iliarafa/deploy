@@ -36,10 +36,14 @@ export default function Header() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
+              <button 
+                onClick={() => window.history.back()}
+                className="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity"
+                aria-label="Go back"
+              >
                 <Hammer className="text-primary text-xl" />
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white">Deploy</h1>
-              </div>
+              </button>
             </div>
             
             {/* Role-based Navigation */}
