@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { User, Mail, Phone, Calendar, Save, Navigation, Settings } from "lucide-react";
+import { User, Mail, Phone, Calendar, Save, Navigation, Settings, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import { useAuth } from "@/contexts/auth-context";
 import { updateProfileSchema, type UpdateProfile, updateNavPrefsSchema, type UpdateNavPrefs, type NavShortcutId } from "@shared/schema";
 import { type UserRole } from "@shared/roles";
@@ -163,6 +164,14 @@ export default function Profile() {
         <PasswordChangeReminder />
         
         <div className="space-y-6">
+          {/* Back to Dashboard */}
+          <Link href="/">
+            <Button variant="ghost" className="gap-2 text-gray-600 hover:text-gray-900 -ml-2">
+              <ArrowLeft className="w-4 h-4" />
+              Back to Dashboard
+            </Button>
+          </Link>
+
           {/* Page Header */}
           <div className="flex items-center space-x-3">
             <User className="text-primary text-2xl" />
