@@ -30,51 +30,56 @@ export default function QuickActions() {
   const activeVacancies = vacancies.filter(v => v.status === "vacant" || v.status === "pending");
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
+    <div className="h-full flex flex-col gap-4">
+      <Card className="flex-1">
+        <CardHeader className="pb-2">
           <CardTitle>Quick Actions</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
+        <CardContent className="pt-0">
+          <div className="space-y-2">
             <Button 
-              className="w-full justify-start bg-primary hover:bg-blue-700 text-white"
+              size="sm"
+              className="w-full justify-start bg-primary hover:bg-blue-700 text-white h-9"
               onClick={() => setIsTaskModalOpen(true)}
             >
-              <Plus className="w-4 h-4 mr-3" />
+              <Plus className="w-4 h-4 mr-2" />
               Create New Task
             </Button>
             
             <Button 
-              className="w-full justify-start bg-orange-500 hover:bg-orange-600 text-white"
+              size="sm"
+              className="w-full justify-start bg-orange-500 hover:bg-orange-600 text-white h-9"
               onClick={() => setIsMaterialModalOpen(true)}
             >
-              <Package className="w-4 h-4 mr-3" />
+              <Package className="w-4 h-4 mr-2" />
               Request Materials
             </Button>
             
             <Button 
-              className="w-full justify-start bg-green-500 hover:bg-green-600 text-white"
+              size="sm"
+              className="w-full justify-start bg-green-500 hover:bg-green-600 text-white h-9"
               onClick={() => setIsInspectionModalOpen(true)}
             >
-              <ClipboardCheck className="w-4 h-4 mr-3" />
+              <ClipboardCheck className="w-4 h-4 mr-2" />
               Schedule Inspection
             </Button>
             
             <Button 
-              className="w-full justify-start bg-green-800 hover:bg-green-900 text-white"
+              size="sm"
+              className="w-full justify-start bg-green-800 hover:bg-green-900 text-white h-9"
               onClick={() => setIsVacancyModalOpen(true)}
             >
-              <Home className="w-4 h-4 mr-3" />
+              <Home className="w-4 h-4 mr-2" />
               Record Vacancy
             </Button>
             
             <Button 
-              className="w-full justify-start bg-yellow-500 hover:bg-yellow-600 text-white"
+              size="sm"
+              className="w-full justify-start bg-yellow-500 hover:bg-yellow-600 text-white h-9"
               onClick={() => setLocation("/issues")}
               data-testid="button-report-issue"
             >
-              <AlertTriangle className="w-4 h-4 mr-3" />
+              <AlertTriangle className="w-4 h-4 mr-2" />
               Report Issue
             </Button>
           </div>

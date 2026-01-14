@@ -91,11 +91,11 @@ export default function Today() {
         </div>
 
         {/* Today's Tasks and Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 lg:items-stretch">
           {/* Today's Tasks */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+          <div className="lg:col-span-2 flex">
+            <Card className="flex-1 flex flex-col">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="flex items-center gap-2">
                   <Clock className="w-5 h-5" />
                   Today's Tasks
@@ -107,16 +107,16 @@ export default function Today() {
                   </Button>
                 </Link>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex-1">
                 {isLoading ? (
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
                     <div className="text-gray-500">Loading tasks...</div>
                   </div>
                 ) : todaysTasks.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Clock className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                    <div className="text-gray-500 text-lg mb-2">No tasks scheduled for today</div>
+                  <div className="text-center py-6">
+                    <Clock className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                    <div className="text-gray-500 mb-1">No tasks scheduled for today</div>
                     <p className="text-gray-400 text-sm">Take a break or plan ahead for tomorrow!</p>
                   </div>
                 ) : (
@@ -181,7 +181,7 @@ export default function Today() {
           </div>
           
           {/* Quick Actions */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 flex">
             <QuickActions />
           </div>
         </div>
