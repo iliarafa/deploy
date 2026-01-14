@@ -1610,6 +1610,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Quick Notes endpoints
+  app.get("/api/quick-notes", authenticate, enforcePasswordChange, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      const notes = await storage.getQuickNotes(userId);
+      res.json(notes);
+    } catch (error) {
+      console.error("Error fetching quick notes:", error);
+      res.status(500).json({ message: "Failed to fetch quick notes" });
+    }
+  });
+
+  app.post("/api/quick-notes", authenticate, enforcePasswordChange, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      const { content } = req.body;
+      if (!content || typeof content !== 'string' || content.trim().length === 0) {
+        return res.status(400).json({ message: "Note content is required" });
+      }
+      const note = await storage.createQuickNote(userId, content.trim());
+      res.status(201).json(note);
+    } catch (error) {
+      console.error("Error creating quick note:", error);
+      res.status(500).json({ message: "Failed to create quick note" });
+    }
+  });
+
+  app.patch("/api/quick-notes/:id", authenticate, enforcePasswordChange, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      const noteId = parseInt(req.params.id);
+      
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      // Check that the note belongs to this user
+      const existingNote = await storage.getQuickNote(noteId);
+      if (!existingNote) {
+        return res.status(404).json({ message: "Note not found" });
+      }
+      if (existingNote.userId !== userId) {
+        return res.status(403).json({ message: "Not authorized to update this note" });
+      }
+      
+      const { content, isPinned } = req.body;
+      const updates: { content?: string; isPinned?: boolean } = {};
+      if (content !== undefined) updates.content = content;
+      if (isPinned !== undefined) updates.isPinned = isPinned;
+      
+      const note = await storage.updateQuickNote(noteId, updates);
+      res.json(note);
+    } catch (error) {
+      console.error("Error updating quick note:", error);
+      res.status(500).json({ message: "Failed to update quick note" });
+    }
+  });
+
+  app.delete("/api/quick-notes/:id", authenticate, enforcePasswordChange, async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      const noteId = parseInt(req.params.id);
+      
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+      
+      // Check that the note belongs to this user
+      const existingNote = await storage.getQuickNote(noteId);
+      if (!existingNote) {
+        return res.status(404).json({ message: "Note not found" });
+      }
+      if (existingNote.userId !== userId) {
+        return res.status(403).json({ message: "Not authorized to delete this note" });
+      }
+      
+      await storage.deleteQuickNote(noteId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting quick note:", error);
+      res.status(500).json({ message: "Failed to delete quick note" });
+    }
+  });
+
   // Catch-all for unknown API routes - return 404 JSON instead of HTML
   app.all('/api/*', (req, res) => {
     res.status(404).json({ message: 'API endpoint not found' });

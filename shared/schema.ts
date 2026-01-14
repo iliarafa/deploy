@@ -176,6 +176,16 @@ export const issues = pgTable("issues", {
   notes: text("notes"), // internal notes for resolution
 });
 
+// Quick Notes for users to jot down immediate thoughts
+export const quickNotes = pgTable("quick_notes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  content: text("content").notNull(),
+  isPinned: boolean("is_pinned").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many, one }) => ({
   approvedByUser: one(users, {
@@ -190,6 +200,14 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   colabMessages: many(colabMessages),
   materialRequests: many(materialRequests),
   reportedIssues: many(issues),
+  quickNotes: many(quickNotes),
+}));
+
+export const quickNotesRelations = relations(quickNotes, ({ one }) => ({
+  user: one(users, {
+    fields: [quickNotes.userId],
+    references: [users.id],
+  }),
 }));
 
 export const userSettingsRelations = relations(userSettings, ({ one }) => ({
@@ -402,6 +420,17 @@ export const insertIssueSchema = createInsertSchema(issues)
     contactMethod: z.enum(["email", "phone", "app"]).optional(),
   });
 
+export const insertQuickNoteSchema = createInsertSchema(quickNotes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateQuickNoteSchema = z.object({
+  content: z.string().min(1, "Note content is required").optional(),
+  isPinned: z.boolean().optional(),
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type UpdateUser = z.infer<typeof updateUserSchema>;
@@ -428,3 +457,6 @@ export type InsertUserSettings = z.infer<typeof insertUserSettingsSchema>;
 export type UpdateUserSettings = z.infer<typeof updateUserSettingsSchema>;
 export type ChangePassword = z.infer<typeof changePasswordSchema>;
 export type UpdateNavPrefs = z.infer<typeof updateNavPrefsSchema>;
+export type QuickNote = typeof quickNotes.$inferSelect;
+export type InsertQuickNote = z.infer<typeof insertQuickNoteSchema>;
+export type UpdateQuickNote = z.infer<typeof updateQuickNoteSchema>;

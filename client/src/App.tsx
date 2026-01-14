@@ -23,6 +23,7 @@ import Vacancies from "@/pages/vacancies";
 import Issues from "@/pages/issues";
 import AdminIssues from "@/pages/admin-issues";
 import { Settings } from "@/pages/settings";
+import QuickNotes from "@/components/quick-notes/quick-notes";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -83,6 +84,7 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <Router />
+            <QuickNotes />
           </TooltipProvider>
         </AuthProvider>
       </ThemeProvider>

@@ -9,6 +9,7 @@ import {
   vacancies,
   colabMessages,
   issues,
+  quickNotes,
   type User, 
   type InsertUser,
   type UpdateUser,
@@ -32,7 +33,9 @@ import {
   type InsertColabMessage,
   type Issue,
   type InsertIssue,
-  type NavShortcutId
+  type NavShortcutId,
+  type QuickNote,
+  type UpdateQuickNote
 } from "@shared/schema";
 import { type UserRole, type Permission, hasPermission, getUserPermissions } from "@shared/roles";
 import { db } from "./db";
@@ -152,6 +155,13 @@ export interface IStorage {
   // Navigation preferences
   getUserNavPrefs(userId: number): Promise<{ navShortcuts: NavShortcutId[] }>;
   updateUserNavPrefs(userId: number, navShortcuts: NavShortcutId[]): Promise<{ navShortcuts: NavShortcutId[] }>;
+  
+  // Quick notes operations
+  getQuickNotes(userId: number): Promise<QuickNote[]>;
+  getQuickNote(id: number): Promise<QuickNote | undefined>;
+  createQuickNote(userId: number, content: string): Promise<QuickNote>;
+  updateQuickNote(id: number, updates: UpdateQuickNote): Promise<QuickNote>;
+  deleteQuickNote(id: number): Promise<void>;
   
   // Role-based authorization helpers
   checkUserPermission(userId: number, permission: Permission): Promise<boolean>;
@@ -523,6 +533,46 @@ export class MemStorage implements IStorage {
     
     const userPermissions = getUserPermissions(user.role as UserRole, user.permissions as Permission[]);
     return hasPermission(userPermissions, permission);
+  }
+
+  // Quick notes methods (MemStorage stubs - not used in production)
+  private quickNotes: Map<number, QuickNote> = new Map();
+  private currentQuickNoteId: number = 1;
+
+  async getQuickNotes(userId: number): Promise<QuickNote[]> {
+    return Array.from(this.quickNotes.values())
+      .filter(note => note.userId === userId)
+      .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
+  }
+
+  async getQuickNote(id: number): Promise<QuickNote | undefined> {
+    return this.quickNotes.get(id);
+  }
+
+  async createQuickNote(userId: number, content: string): Promise<QuickNote> {
+    const id = this.currentQuickNoteId++;
+    const note: QuickNote = {
+      id,
+      userId,
+      content,
+      isPinned: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.quickNotes.set(id, note);
+    return note;
+  }
+
+  async updateQuickNote(id: number, updates: UpdateQuickNote): Promise<QuickNote> {
+    const note = this.quickNotes.get(id);
+    if (!note) throw new Error("Note not found");
+    const updated = { ...note, ...updates, updatedAt: new Date() };
+    this.quickNotes.set(id, updated);
+    return updated;
+  }
+
+  async deleteQuickNote(id: number): Promise<void> {
+    this.quickNotes.delete(id);
   }
 
   async getTasks(userId?: number, userRole?: UserRole): Promise<Task[]> {
@@ -1642,6 +1692,40 @@ export class DatabaseStorage implements IStorage {
     
     const userPermissions = getUserPermissions(user.role as UserRole, user.permissions as Permission[]);
     return hasPermission(userPermissions, permission);
+  }
+
+  async getQuickNotes(userId: number): Promise<QuickNote[]> {
+    return await db
+      .select()
+      .from(quickNotes)
+      .where(eq(quickNotes.userId, userId))
+      .orderBy(quickNotes.createdAt);
+  }
+
+  async getQuickNote(id: number): Promise<QuickNote | undefined> {
+    const [note] = await db.select().from(quickNotes).where(eq(quickNotes.id, id));
+    return note;
+  }
+
+  async createQuickNote(userId: number, content: string): Promise<QuickNote> {
+    const [note] = await db
+      .insert(quickNotes)
+      .values({ userId, content })
+      .returning();
+    return note;
+  }
+
+  async updateQuickNote(id: number, updates: UpdateQuickNote): Promise<QuickNote> {
+    const [note] = await db
+      .update(quickNotes)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(quickNotes.id, id))
+      .returning();
+    return note;
+  }
+
+  async deleteQuickNote(id: number): Promise<void> {
+    await db.delete(quickNotes).where(eq(quickNotes.id, id));
   }
 }
 
