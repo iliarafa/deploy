@@ -1,0 +1,97 @@
+Task: Refactor the "Deploy" Dashboard UI for Admin and Project Manager Users.
+
+Context: We are upgrading the current dashboard from a basic utility interface to a professional, high-density SaaS command center. The target audience is Administrators and Project Managers. Their goal is governance, identifying bottlenecks, and monitoring system health—not just viewing a personal to-do list.
+
+Design System & Styling:
+
+Vibe: Clean, "Enterprise SaaS," high efficiency.
+
+Palette: Switch from the current "rainbow" buttons to a Monochromatic/Duotone Blue theme. Use light grays (bg-gray-50 or #F4F6F8) for the page background and White for cards.
+
+Shadows: Soft, diffused shadows (shadow-sm or shadow-md) for depth. No heavy borders.
+
+Typography: Strict hierarchy. Dark headers, lighter subtext. Use "Inter" or similar sans-serif.
+
+Specific Implementation Steps:
+
+1. Create a "Metric Card" Component (Top Row) Implement a reusable MetricCard component to display high-level KPIs at the top of the dashboard.
+
+Layout: 4 cards in a flex/grid row.
+
+Features: Title (uppercase, small), Main Value (large, bold), Icon (top right, subtle), and a Footer for Context/Trends.
+
+Data Points to Mock:
+
+Pending Approvals: Value "8", Alert style (red border left), Subtext "Requires review".
+
+Avg Resolution Time: Value "4.2h", Trend "12% (Green Arrow Up)", Subtext "vs last week".
+
+Active Staff: Value "14", Subtext "3 currently idle".
+
+Critical Issues: Value "3", Trend "2 (Red Arrow Down)", Subtext "High priority".
+
+Reference Code for Style: Use this React/Tailwind structure as a guide:
+
+JavaScript
+const MetricCard = ({ title, value, subtext, trend, trendDirection, icon: Icon, alert }) => {
+  const trendColor = trendDirection === 'up' ? 'text-green-600' : 'text-red-500';
+  const alertStyle = alert ? "border-l-4 border-l-red-500" : "";
+  return (
+    <div className={`bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between h-36 ${alertStyle}`}>
+      <div className="flex justify-between items-start">
+        <h3 className="text-xs font-semibold tracking-wider text-gray-500 uppercase">{title}</h3>
+        <div className="p-2 bg-blue-50 rounded-lg text-blue-600"><Icon size={20} /></div>
+      </div>
+      <div className="mt-2"><span className="text-3xl font-bold text-gray-900">{value}</span></div>
+      <div className="flex items-center mt-2 text-sm">
+         {/* Render trend logic here */}
+        <span className="text-gray-400">{subtext}</span>
+      </div>
+    </div>
+  );
+};
+2. Refactor "Quick Actions" (Right Column)
+
+Change: Remove the vertical stack of rainbow-colored buttons.
+
+New Design: Create a 2x2 Grid of action cards.
+
+Style: White background, subtle border. When hovered, the border becomes Blue.
+
+Content:
+
+Card 1: "New Task" (Plus icon)
+
+Card 2: "Request Materials" (Box icon)
+
+Card 3: "Schedule Inspection" (Calendar/Check icon)
+
+Card 4: "Report Issue" (Warning icon)
+
+Visuals: Use the primary brand blue for the icons and text. Do not use full-fill background colors.
+
+3. Refactor "Today's Tasks" (Main Area)
+
+Change: The current empty state is too large and empty.
+
+New Design: Split this container.
+
+Left (70%): The Task List / Project Table. If empty, show a more compact, friendly "All caught up" state with a smaller illustration.
+
+Right (30%): Integrate a mini-calendar widget or a "Schedule" summary directly next to the task list, so the space isn't wasted.
+
+4. Refactor "Vacancies" Widget
+
+Change: Convert the simple list into a detailed, compact table row.
+
+Columns: Unit # (Bold), Status (Pill: "Vacant" red, "Occupied" green), Duration ("43 days").
+
+Plan:
+
+Define the MetricCard and ActionGrid components.
+
+Update the main layout to include the Metric Row at the top.
+
+Apply the new color system (Greys, Whites, Primary Blue).
+
+Render the page.
