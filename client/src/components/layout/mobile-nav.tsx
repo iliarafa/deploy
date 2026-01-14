@@ -5,12 +5,16 @@ import { NAV_OPTIONS, getVisibleShortcuts } from "@/lib/nav";
 import { type UserRole } from "@shared/roles";
 import { type NavShortcutId } from "@shared/schema";
 
+interface NavPrefsResponse {
+  navShortcuts: NavShortcutId[];
+}
+
 export default function MobileNav() {
   const [location] = useLocation();
   const { user, isLoading: authLoading } = useAuth();
 
   // Fetch user navigation preferences
-  const { data: navPrefs, isLoading: navPrefsLoading } = useQuery({
+  const { data: navPrefs, isLoading: navPrefsLoading } = useQuery<NavPrefsResponse>({
     queryKey: ["/api/me/nav-preferences"],
     enabled: !authLoading && !!user,
   });

@@ -26,21 +26,25 @@ import Header from "@/components/layout/header";
 import MobileNav from "@/components/layout/mobile-nav";
 import PasswordChangeReminder from "@/components/notifications/password-change-reminder";
 
+interface NavPrefsResponse {
+  navShortcuts: NavShortcutId[];
+}
+
 export default function Profile() {
   const { user, setUser } = useAuth();
   const { toast } = useToast();
   const [selectedShortcuts, setSelectedShortcuts] = useState<NavShortcutId[]>([]);
-  const [shortcutsInitialized, setShortcutsInitialized] = useState(false);
+  const [hasLocalChanges, setHasLocalChanges] = useState(false);
 
   // Fetch user navigation preferences
-  const { data: navPrefs, isLoading: navPrefsLoading } = useQuery({
+  const { data: navPrefs, isLoading: navPrefsLoading, dataUpdatedAt } = useQuery<NavPrefsResponse>({
     queryKey: ["/api/me/nav-preferences"],
     enabled: !!user,
   });
 
-  // Initialize selectedShortcuts when data loads, applying defaults if empty
+  // Sync selectedShortcuts with API data when it changes (unless user has unsaved local changes)
   useEffect(() => {
-    if (navPrefs && user && !shortcutsInitialized) {
+    if (navPrefs && user && !hasLocalChanges) {
       const shortcuts = Array.isArray(navPrefs?.navShortcuts) ? navPrefs.navShortcuts : [];
       if (shortcuts.length === 0) {
         // Apply role-based defaults when user has no saved preferences
@@ -49,9 +53,8 @@ export default function Profile() {
       } else {
         setSelectedShortcuts(shortcuts);
       }
-      setShortcutsInitialized(true);
     }
-  }, [navPrefs, user, shortcutsInitialized]);
+  }, [navPrefs, user, dataUpdatedAt, hasLocalChanges]);
 
   const form = useForm<UpdateProfile>({
     resolver: zodResolver(updateProfileSchema),
@@ -110,6 +113,7 @@ export default function Profile() {
       return await response.json();
     },
     onSuccess: (data: { navShortcuts: NavShortcutId[] }) => {
+      setHasLocalChanges(false);
       queryClient.invalidateQueries({ queryKey: ["/api/me/nav-preferences"] });
       toast({
         title: "Navigation Updated",
@@ -140,6 +144,7 @@ export default function Profile() {
       : selectedShortcuts.filter(id => id !== shortcutId);
     
     setSelectedShortcuts(newShortcuts);
+    setHasLocalChanges(true);
   };
 
   const saveNavigationPreferences = () => {
