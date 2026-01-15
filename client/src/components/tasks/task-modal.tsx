@@ -29,6 +29,8 @@ const taskFormSchema = insertTaskSchema.extend({
   multiDay: z.boolean().optional(),
   recurrenceType: z.enum(['none', 'daily', 'weekly', 'bi-weekly', 'monthly', 'yearly']).optional(),
   recurrenceInterval: z.number().min(1).max(365).optional(),
+  recurrenceEndDays: z.number().min(1).max(365).nullable().optional(),
+  openEnded: z.boolean().optional(),
 });
 
 type TaskFormData = z.infer<typeof taskFormSchema>;
@@ -76,6 +78,8 @@ export default function TaskModal({ isOpen, onClose, prefilledDate, prefilledTim
       multiDay: false,
       recurrenceType: 'none',
       recurrenceInterval: 1,
+      recurrenceEndDays: null,
+      openEnded: true,
     },
   });
 
@@ -117,6 +121,7 @@ export default function TaskModal({ isOpen, onClose, prefilledDate, prefilledTim
         nextDueDate: nextDueDate,
         recurrenceType: isRecurring ? data.recurrenceType : undefined,
         recurrenceInterval: isRecurring ? data.recurrenceInterval : undefined,
+        recurrenceEndDays: isRecurring && !data.openEnded ? data.recurrenceEndDays : null,
       };
       return apiRequest("POST", "/api/tasks", taskData);
     },
@@ -157,6 +162,8 @@ export default function TaskModal({ isOpen, onClose, prefilledDate, prefilledTim
         multiDay: false,
         recurrenceType: 'none',
         recurrenceInterval: 1,
+        recurrenceEndDays: null,
+        openEnded: true,
       });
     }
   }, [isOpen, prefilledDate, prefilledTime, form]);
@@ -342,6 +349,61 @@ export default function TaskModal({ isOpen, onClose, prefilledDate, prefilledTim
                   </FormItem>
                 )}
               />
+            )}
+
+            {form.watch("recurrenceType") !== "none" && form.watch("recurrenceType") && (
+              <div className="space-y-3 p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700">
+                <FormField
+                  control={form.control}
+                  name="openEnded"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          data-testid="checkbox-open-ended"
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          Open-ended (no end date)
+                        </FormLabel>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Task will appear daily for manual activation
+                        </p>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                {!form.watch("openEnded") && (
+                  <FormField
+                    control={form.control}
+                    name="recurrenceEndDays"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>End after (days)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min="1" 
+                            max="365" 
+                            placeholder="30"
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || null)}
+                            value={field.value || ""}
+                            data-testid="input-recurrence-end-days"
+                          />
+                        </FormControl>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Stop recurring after this many days from start
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
             )}
 
             <FormField

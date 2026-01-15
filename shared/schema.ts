@@ -111,6 +111,7 @@ export const tasks = pgTable("tasks", {
   // Recurring task fields
   recurrenceType: text("recurrence_type"), // none, daily, weekly, bi-weekly, monthly, yearly
   recurrenceInterval: integer("recurrence_interval").default(1), // every N units
+  recurrenceEndDays: integer("recurrence_end_days"), // null = open-ended, number = end after N days
   nextDueDate: timestamp("next_due_date"), // when next instance should be created
   parentTaskId: integer("parent_task_id"), // reference to original recurring task
   isRecurringTemplate: boolean("is_recurring_template").default(false), // marks the original template
@@ -377,6 +378,7 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({
   endDate: z.string().datetime().optional().or(z.date().optional()),
   recurrenceType: RecurrenceType.optional(),
   recurrenceInterval: z.number().int().min(1).max(365).optional(),
+  recurrenceEndDays: z.number().int().min(1).max(365).nullable().optional(), // null = open-ended
 });
 
 export const insertMaterialRequestSchema = createInsertSchema(materialRequests).omit({
