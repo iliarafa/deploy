@@ -778,6 +778,16 @@ export default function CalendarView({
     );
   };
 
+  // Get unique workers for the legend - must be before any conditional returns
+  const workerLegendData = useMemo(() => {
+    if (!isAdminView) return [];
+    const workerNames = Array.from(new Set(tasks.map(t => t.assignedTo).filter(Boolean) as string[]));
+    return workerNames.map(name => ({
+      name,
+      color: getWorkerSolidColor(name)
+    })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [tasks, isAdminView]);
+
   if (isLoading) {
     return (
       <Card className="mb-6 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl">
@@ -789,16 +799,6 @@ export default function CalendarView({
       </Card>
     );
   }
-
-  // Get unique workers for the legend
-  const workerLegendData = useMemo(() => {
-    if (!isAdminView) return [];
-    const workerNames = Array.from(new Set(tasks.map(t => t.assignedTo).filter(Boolean) as string[]));
-    return workerNames.map(name => ({
-      name,
-      color: getWorkerSolidColor(name)
-    })).sort((a, b) => a.name.localeCompare(b.name));
-  }, [tasks, isAdminView]);
 
   return (
     <>
