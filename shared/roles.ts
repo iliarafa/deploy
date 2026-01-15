@@ -88,7 +88,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   
   worker: [
     // Task access
-    'view_assigned_tasks', 'create_task', 'edit_task',
+    'view_assigned_tasks', 'create_task', 'edit_task', 'delete_task',
     // Can request materials
     'create_material_request', 'view_own_materials',
     // Communications
