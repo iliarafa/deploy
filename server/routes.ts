@@ -88,7 +88,7 @@ import {
   enforcePasswordChange
 } from "./auth-middleware";
 import { type UserRole } from "@shared/roles";
-import { type NavShortcutId } from "@shared/schema";
+import { type NavShortcutId, type Task } from "@shared/schema";
 
 // Role-based navigation shortcuts configuration
 // These match the NAV_RULES allowedRoles in client/src/lib/nav.ts
@@ -948,6 +948,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete task" });
+    }
+  });
+
+  // Activate recurring template - creates an instance for today
+  app.post("/api/tasks/:id/activate", authenticate, enforcePasswordChange, requirePermission('create_task'), async (req, res) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      const template = await storage.getTask(templateId);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      if (!template.isRecurringTemplate) {
+        return res.status(400).json({ message: "Task is not a recurring template" });
+      }
+      
+      // Validate recurrence settings
+      if (!template.recurrenceType || template.recurrenceType === 'none') {
+        return res.status(400).json({ message: "Template has invalid recurrence settings" });
+      }
+      
+      // Check if template has exceeded its end date (normalize to day boundaries)
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      
+      if (template.recurrenceEndDays) {
+        const templateStart = new Date(template.startDate);
+        const templateStartDay = new Date(templateStart.getFullYear(), templateStart.getMonth(), templateStart.getDate());
+        const endDate = new Date(templateStartDay);
+        endDate.setDate(endDate.getDate() + template.recurrenceEndDays);
+        // Allow activation on the last day (compare start of today with end of last day)
+        if (todayStart > endDate) {
+          return res.status(400).json({ message: "This recurring task has expired and can no longer be activated" });
+        }
+      }
+      
+      // Check if already activated today (prevent duplicates)
+      // Match by parentTaskId, same day, and same assignee for precise duplicate detection
+      const allTasks = await storage.getTasks();
+      const dayStart = todayStart;
+      const dayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+      
+      const alreadyActivatedToday = allTasks.some((t: Task) => 
+        t.parentTaskId === template.id &&
+        !t.isRecurringTemplate &&
+        t.assignedTo === template.assignedTo &&
+        new Date(t.startDate) >= dayStart && 
+        new Date(t.startDate) < dayEnd
+      );
+      
+      if (alreadyActivatedToday) {
+        return res.status(400).json({ message: "This task has already been activated for today" });
+      }
+      
+      // Check if user can activate this task (same rules as task assignment)
+      const userRole = req.user?.role;
+      const userId = req.user?.id;
+      if (userRole === 'worker') {
+        const currentUser = await storage.getUser(userId!);
+        const assignedToLower = template.assignedTo?.toLowerCase().trim() || '';
+        const usernameLower = currentUser?.username?.toLowerCase().trim() || '';
+        const firstNameLower = currentUser?.firstName?.toLowerCase().trim() || '';
+        const lastNameLower = currentUser?.lastName?.toLowerCase().trim() || '';
+        const fullName = firstNameLower && lastNameLower ? `${firstNameLower} ${lastNameLower}` : '';
+        
+        const isAssignee = assignedToLower && (
+          assignedToLower === usernameLower ||
+          assignedToLower === firstNameLower ||
+          assignedToLower === fullName ||
+          assignedToLower.includes(usernameLower) ||
+          assignedToLower.includes(fullName)
+        );
+        
+        if (!isAssignee) {
+          return res.status(403).json({ message: "You can only activate recurring tasks assigned to you" });
+        }
+      }
+      
+      // Create today's date with same time as template
+      const templateStart = new Date(template.startDate);
+      const instanceStart = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+        templateStart.getHours(),
+        templateStart.getMinutes()
+      );
+      
+      // Create instance task (non-recurring) - preserve template creator for consistent ownership
+      const instanceData = {
+        title: template.title,
+        description: template.description,
+        category: template.category,
+        priority: template.priority,
+        status: "pending" as const,
+        location: template.location,
+        apartmentNumber: template.apartmentNumber,
+        assignedTo: template.assignedTo,
+        startDate: instanceStart,
+        endDate: null,
+        isRecurringTemplate: false,
+        parentTaskId: template.id,
+        recurrenceType: null,
+        recurrenceInterval: null,
+        recurrenceEndDays: null,
+        createdBy: template.createdBy, // Preserve original template creator for ownership consistency
+      };
+      
+      const validatedData = insertTaskSchema.parse(instanceData);
+      const newTask = await storage.createTask(validatedData);
+      
+      // Send real-time notification
+      wsManager.notifyTaskCreated(newTask);
+      
+      res.status(201).json(newTask);
+    } catch (error) {
+      console.error("Activate recurring task error:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid task data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to activate recurring task" });
     }
   });
 

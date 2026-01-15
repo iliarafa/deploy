@@ -2,9 +2,9 @@ import Header from "@/components/layout/header";
 import MobileNav from "@/components/layout/mobile-nav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { type Task, type User, type Issue, type Vacancy } from "@shared/schema";
-import { ChevronRight, Clock, MapPin, User as UserIcon, Calendar as CalendarIcon, ArrowRight, FileCheck, Users, AlertTriangle, Home } from "lucide-react";
+import { ChevronRight, Clock, MapPin, User as UserIcon, Calendar as CalendarIcon, ArrowRight, FileCheck, Users, AlertTriangle, Home, RotateCcw, Play } from "lucide-react";
 import { getCategoryColor } from "@/lib/calendar-utils";
 import { formatTime } from "@/lib/date-utils";
 import { useAuth } from "@/contexts/auth-context";
@@ -15,14 +15,39 @@ import { useState } from "react";
 import TaskDetailModal from "@/components/tasks/task-detail-modal";
 import { Link, useLocation } from "wouter";
 import { format } from "date-fns";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Today() {
   const [, setLocation] = useLocation();
   const { user, isLoading: authLoading } = useAuth();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | undefined>();
+  const { toast } = useToast();
 
   const isAdminOrPM = user?.role === "admin" || user?.role === "project_manager";
+
+  // Mutation to activate recurring template
+  const activateMutation = useMutation({
+    mutationFn: async (templateId: number) => {
+      const response = await apiRequest("POST", `/api/tasks/${templateId}/activate`);
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({
+        title: "Task activated",
+        description: "The recurring task has been added to today's schedule",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to activate task",
+        variant: "destructive",
+      });
+    },
+  });
 
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
@@ -76,10 +101,41 @@ export default function Today() {
            displayName.includes(taskAssignee);
   });
   
+  // Regular tasks for today (non-recurring or instances)
   const todaysTasks = userFilteredTasks.filter(task => {
+    if (task.isRecurringTemplate) return false; // Exclude templates from regular list
     const taskStart = new Date(task.startDate);
     const taskEnd = task.endDate ? new Date(task.endDate) : taskStart;
     return taskStart < dayEnd && taskEnd >= dayStart;
+  });
+
+  // Recurring templates that can be activated today
+  const recurringTemplates = userFilteredTasks.filter(task => {
+    if (!task.isRecurringTemplate) return false;
+    
+    // Validate recurrence settings
+    if (!task.recurrenceType || task.recurrenceType === 'none') return false;
+    
+    // Check if template has ended (recurrenceEndDays) - normalized to day boundaries
+    if (task.recurrenceEndDays) {
+      const startDate = new Date(task.startDate);
+      const startDateNormalized = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+      const endDate = new Date(startDateNormalized);
+      endDate.setDate(endDate.getDate() + task.recurrenceEndDays);
+      // Compare today's start with end date (allow activation on last day)
+      if (dayStart > endDate) return false;
+    }
+    
+    // Check if already activated today (look for instances with this parent and same assignee)
+    const alreadyActivatedToday = userFilteredTasks.some(t => 
+      t.parentTaskId === task.id &&
+      !t.isRecurringTemplate &&
+      t.assignedTo === task.assignedTo &&
+      new Date(t.startDate) >= dayStart && 
+      new Date(t.startDate) < dayEnd
+    );
+    
+    return !alreadyActivatedToday;
   });
 
   // Get upcoming tasks (next 3 days), sorted by start time
@@ -121,9 +177,9 @@ export default function Today() {
             Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'}!
           </h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm" data-testid="text-today-count">
-            {todaysTasks.length === 0 
+            {todaysTasks.length === 0 && recurringTemplates.length === 0
               ? "No tasks scheduled for today." 
-              : `You have ${todaysTasks.length} task${todaysTasks.length === 1 ? '' : 's'} scheduled for today.`
+              : `You have ${todaysTasks.length} task${todaysTasks.length === 1 ? '' : 's'} scheduled${recurringTemplates.length > 0 ? ` and ${recurringTemplates.length} recurring task${recurringTemplates.length === 1 ? '' : 's'} to activate` : ''}.`
             }
           </p>
         </div>
@@ -189,7 +245,7 @@ export default function Today() {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
                     <div className="text-gray-500">Loading tasks...</div>
                   </div>
-                ) : todaysTasks.length === 0 ? (
+                ) : todaysTasks.length === 0 && recurringTemplates.length === 0 ? (
                   <div className="text-center py-8">
                     <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-3">
                       <Clock className="w-6 h-6 text-green-500" />
@@ -199,6 +255,7 @@ export default function Today() {
                   </div>
                 ) : (
                   <div className="space-y-2">
+                    {/* Regular tasks for today */}
                     {todaysTasks.slice(0, 5).map((task) => (
                       <div 
                         key={task.id} 
@@ -231,6 +288,52 @@ export default function Today() {
                         <ChevronRight className="w-4 h-4 text-gray-400 ml-2" />
                       </div>
                     ))}
+
+                    {/* Recurring templates - shown at 50% opacity with activate button */}
+                    {recurringTemplates.slice(0, 5 - Math.min(todaysTasks.length, 5)).map((template) => (
+                      <div 
+                        key={`template-${template.id}`} 
+                        className="flex items-center p-3 bg-gray-50 dark:bg-slate-700 rounded-lg border border-dashed border-gray-300 dark:border-slate-500 hover:border-blue-300 dark:hover:border-blue-400 transition-colors opacity-50 hover:opacity-75"
+                        data-testid={`recurring-template-${template.id}`}
+                      >
+                        <div className={`w-3 h-3 rounded-full mr-3 ${getCategoryColor(template.category).split(' ')[0]}`}></div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium text-gray-900 dark:text-white truncate flex items-center gap-2">
+                              <RotateCcw className="w-3 h-3 text-blue-500" />
+                              {template.title}
+                            </h4>
+                            <span className="text-xs text-gray-500 ml-2">{formatTime(template.startDate)}</span>
+                          </div>
+                          <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                            {template.location && (
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3" />
+                                {template.location}
+                              </span>
+                            )}
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                              {template.recurrenceType}
+                            </span>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="ml-2 text-green-600 border-green-300 hover:bg-green-50 hover:border-green-500"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            activateMutation.mutate(template.id);
+                          }}
+                          disabled={activateMutation.isPending}
+                          data-testid={`activate-template-${template.id}`}
+                        >
+                          <Play className="w-3 h-3 mr-1" />
+                          Activate
+                        </Button>
+                      </div>
+                    ))}
+
                     {todaysTasks.length > 5 && (
                       <Link href="/tasks">
                         <Button variant="ghost" className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-50">
