@@ -75,7 +75,10 @@ npm install
 DATABASE_URL=your_postgresql_connection_string
 SENDGRID_API_KEY=your_sendgrid_api_key
 FROM_EMAIL=your_sender_email
+ACTIVITY_ALERT_EMAILS=info@csrllc.net,ilias@csrllc.net,geodiac@aol.com,billing@csrllc.net
 ```
+
+`ACTIVITY_ALERT_EMAILS` is optional. If unset, login and write alerts go to the four addresses above. Task and material notification emails are unchanged.
 
 4. Push database schema
 ```bash
