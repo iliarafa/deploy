@@ -79,6 +79,7 @@ import {
 import { z } from "zod";
 import { wsManager } from "./websocket";
 import { sendTaskNotification, sendMaterialRequestNotification, sendEmail, sendTaskStatusChangeNotification, sendTaskCreatedNotificationToAdmins } from "./email";
+import { activityAlertMiddleware } from "./activity-alerts";
 import { 
   authenticate, 
   requirePermission, 
@@ -106,7 +107,9 @@ function getShortcutsForRole(role: UserRole): NavShortcutId[] {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  
+  // Fire activity-alert emails after successful login and data writes.
+  // Mail is queued in the background and never fails the user-facing request.
+  app.use(activityAlertMiddleware());
 
   // Authentication routes
   app.post("/api/auth/login", async (req, res) => {
