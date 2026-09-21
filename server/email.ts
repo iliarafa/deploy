@@ -129,3 +129,138 @@ export async function sendTaskCreatedNotificationToAdmins(
   const results = await Promise.all(promises);
   return results.every(result => result);
 }
+
+const DEFAULT_ACTIVITY_ALERT_EMAILS = [
+  "info@csrllc.net",
+  "ilias@csrllc.net",
+  "geodiac@aol.com",
+  "billing@csrllc.net",
+];
+
+export type ActivityAction = "created" | "edited";
+
+export interface ActivityActor {
+  name?: string | null;
+  email?: string | null;
+  role?: string | null;
+}
+
+export interface ActivityAlertParams {
+  action: ActivityAction;
+  entityType: string;
+  summary: string;
+  actor?: ActivityActor | null;
+  timestamp?: Date;
+}
+
+export function getActivityAlertRecipients(): string[] {
+  const raw = process.env.ACTIVITY_ALERT_EMAILS;
+  if (raw && raw.trim()) {
+    const parsed = raw.split(",").map((email) => email.trim()).filter(Boolean);
+    if (parsed.length > 0) {
+      return parsed;
+    }
+  }
+  return DEFAULT_ACTIVITY_ALERT_EMAILS;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function sanitizeEmailText(value: string | null | undefined): string {
+  if (!value) return "";
+  return value.replace(/[\r\n\t]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function formatActorLabel(actor?: ActivityActor | null): string {
+  if (!actor) return "Unknown user";
+  const name = sanitizeEmailText(actor.name) || "Unknown user";
+  const parts = [name];
+  const email = sanitizeEmailText(actor.email);
+  const role = sanitizeEmailText(actor.role);
+  if (email) parts.push(`<${email}>`);
+  if (role) parts.push(`(${role})`);
+  return parts.join(" ");
+}
+
+export function formatActivitySummary(parts: Array<string | number | null | undefined>, maxLength = 80): string {
+  const summary = parts
+    .map((part) => (part === null || part === undefined ? "" : sanitizeEmailText(String(part))))
+    .filter(Boolean)
+    .join(" ");
+  if (summary.length <= maxLength) return summary;
+  return `${summary.slice(0, maxLength - 1)}…`;
+}
+
+/**
+ * Email all activity-alert recipients after a successful create or edit.
+ * Never throws — missing SendGrid or mail errors are logged and skipped.
+ */
+export async function sendActivityAlert(params: ActivityAlertParams): Promise<boolean> {
+  try {
+    const recipients = getActivityAlertRecipients();
+    if (recipients.length === 0) {
+      console.warn("No activity alert recipients configured, skipping email send");
+      return false;
+    }
+
+    const action = params.action === "edited" ? "edited" : "created";
+    const entityType = sanitizeEmailText(params.entityType) || "Entry";
+    const summary = formatActivitySummary([params.summary]);
+    const timestamp = params.timestamp || new Date();
+    const actorLabel = formatActorLabel(params.actor);
+    const subject = `[Deploy] Entry ${action}: ${entityType}${summary ? ` ${summary}` : ""}`;
+    const from = process.env.FROM_EMAIL || "ilias@csrllc.net";
+
+    const html = `
+      <h2>Entry ${escapeHtml(action)}</h2>
+      <p>An entry was ${escapeHtml(action)} in Deploy.</p>
+      <p><strong>Who:</strong> ${escapeHtml(actorLabel)}</p>
+      <p><strong>Action:</strong> ${escapeHtml(action)}</p>
+      <p><strong>Entity:</strong> ${escapeHtml(entityType)}</p>
+      <p><strong>Summary:</strong> ${escapeHtml(summary || "—")}</p>
+      <p><strong>When:</strong> ${escapeHtml(timestamp.toISOString())}</p>
+      <p>Please check the Deploy app for full details.</p>
+    `;
+
+    const text = [
+      `Entry ${action}`,
+      `Who: ${actorLabel}`,
+      `Action: ${action}`,
+      `Entity: ${entityType}`,
+      `Summary: ${summary || "—"}`,
+      `When: ${timestamp.toISOString()}`,
+      "Check the Deploy app for details.",
+    ].join("\n");
+
+    const results = await Promise.all(
+      recipients.map((to) =>
+        sendEmail({
+          to,
+          from,
+          subject,
+          html,
+          text,
+        })
+      )
+    );
+
+    return results.every(Boolean);
+  } catch (error) {
+    console.warn("Activity alert email failed:", error);
+    return false;
+  }
+}
+
+/** Fire-and-forget wrapper so create/edit APIs never wait on mail. */
+export function queueActivityAlert(params: ActivityAlertParams): void {
+  void sendActivityAlert(params).catch((error) => {
+    console.warn("Activity alert email failed:", error);
+  });
+}

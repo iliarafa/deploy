@@ -75,7 +75,10 @@ npm install
 DATABASE_URL=your_postgresql_connection_string
 SENDGRID_API_KEY=your_sendgrid_api_key
 FROM_EMAIL=your_sender_email
+ACTIVITY_ALERT_EMAILS=info@csrllc.net,ilias@csrllc.net,geodiac@aol.com,billing@csrllc.net
 ```
+
+`SENDGRID_API_KEY` and `FROM_EMAIL` must be present on the Vercel project that hosts this app. `ACTIVITY_ALERT_EMAILS` is a comma-separated list of recipients for create/edit activity alerts; if unset, the four addresses above are used.
 
 4. Push database schema
 ```bash
