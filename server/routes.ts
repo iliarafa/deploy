@@ -78,7 +78,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { wsManager } from "./websocket";
-import { sendTaskNotification, sendMaterialRequestNotification, sendEmail, sendTaskStatusChangeNotification, sendTaskCreatedNotificationToAdmins } from "./email";
+import { sendTaskNotification, sendMaterialRequestNotification, sendEmail, sendTaskStatusChangeNotification, sendTaskCreatedNotificationToAdmins, queueActivityAlert, formatActivitySummary, type ActivityAction, type ActivityActor } from "./email";
 import { 
   authenticate, 
   requirePermission, 
@@ -103,6 +103,46 @@ function getShortcutsForRole(role: UserRole): NavShortcutId[] {
   };
   
   return roleShortcuts[role] || [];
+}
+
+function actorFromUser(user?: {
+  firstName?: string | null;
+  lastName?: string | null;
+  username?: string | null;
+  email?: string | null;
+  role?: string | null;
+} | null): ActivityActor {
+  if (!user) {
+    return { name: "Unknown user" };
+  }
+  const name = `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.username || "Unknown user";
+  return {
+    name,
+    email: user.email || undefined,
+    role: user.role || undefined,
+  };
+}
+
+/** Resolve who made the change, then email activity recipients without blocking the API. */
+function notifyActivity(
+  req: { user?: { id: number; role?: string } },
+  action: ActivityAction,
+  entityType: string,
+  summary: string,
+  actorOverride?: ActivityActor
+): void {
+  void (async () => {
+    try {
+      let actor = actorOverride;
+      if (!actor && req.user?.id) {
+        const user = await storage.getUser(req.user.id);
+        actor = actorFromUser(user ?? { role: req.user.role });
+      }
+      queueActivityAlert({ action, entityType, summary, actor });
+    } catch (error) {
+      console.warn("Activity alert failed:", error);
+    }
+  })();
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -253,6 +293,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const registrationRequest = await storage.createRegistrationRequest(validatedData);
+
+      notifyActivity(
+        req,
+        "created",
+        "Registration request",
+        formatActivitySummary([`#${registrationRequest.id}`, registrationRequest.username]),
+        {
+          name: `${validatedData.firstName || ""} ${validatedData.lastName || ""}`.trim() || validatedData.username,
+          email: validatedData.email,
+        }
+      );
       
       // Send notification to admins about new registration
       try {
@@ -300,6 +351,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validatedData = reviewRegistrationRequestSchema.parse(req.body);
       const reviewedRequest = await storage.reviewRegistrationRequest(id, userId, validatedData);
+
+      notifyActivity(
+        req,
+        "edited",
+        "Registration request",
+        formatActivitySummary([`#${reviewedRequest.id}`, reviewedRequest.username, reviewedRequest.status])
+      );
       
       // Send real-time notification
       try {
@@ -341,6 +399,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updatedUser = await storage.updateUser(id, validatedData);
       const { password, ...safeUser } = updatedUser;
+
+      notifyActivity(
+        req,
+        "edited",
+        "User",
+        formatActivitySummary([`#${safeUser.id}`, safeUser.username])
+      );
       
       res.json(safeUser);
     } catch (error) {
@@ -395,6 +460,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const updatedUser = await storage.approveUser(newUser.id, userId, validatedData.role || 'worker');
         // Remove password from response
         const { password, ...safeUser } = updatedUser;
+
+        notifyActivity(
+          req,
+          "created",
+          "User",
+          formatActivitySummary([`#${safeUser.id}`, safeUser.username])
+        );
         
         // Send real-time notification
         try {
@@ -421,6 +493,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Remove password from response
       const { password, ...safeUser } = newUser;
+
+      notifyActivity(
+        req,
+        "created",
+        "User",
+        formatActivitySummary([`#${safeUser.id}`, safeUser.username])
+      );
+
       res.status(201).json(safeUser);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -480,6 +560,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updatedUser = await storage.updateUser(userId, allowedUpdates);
       const { password, ...safeUser } = updatedUser;
+
+      notifyActivity(
+        req,
+        "edited",
+        "User",
+        formatActivitySummary([`#${safeUser.id}`, safeUser.username, "profile"])
+      );
       
       res.json(safeUser);
     } catch (error) {
@@ -740,6 +827,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validatedData = insertTaskSchema.parse(taskData);
       const task = await storage.createTask(validatedData);
+
+      notifyActivity(
+        req,
+        "created",
+        "Task",
+        formatActivitySummary([`#${task.id}`, task.title])
+      );
       
       // Send real-time notification
       wsManager.notifyTaskCreated(task);
@@ -868,6 +962,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validatedData = insertTaskSchema.partial().parse(updateData);
       const task = await storage.updateTask(id, validatedData);
+
+      notifyActivity(
+        req,
+        "edited",
+        "Task",
+        formatActivitySummary([`#${task.id}`, task.title])
+      );
       
       // Check if status changed to "in-progress" by a worker
       if (
@@ -1059,6 +1160,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validatedData = insertTaskSchema.parse(instanceData);
       const newTask = await storage.createTask(validatedData);
+
+      notifyActivity(
+        req,
+        "created",
+        "Task",
+        formatActivitySummary([`#${newTask.id}`, newTask.title, "recurring instance"])
+      );
       
       // Send real-time notification
       wsManager.notifyTaskCreated(newTask);
@@ -1098,6 +1206,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/tasks/recurring/generate", authenticate, enforcePasswordChange, requirePermission('create_task'), async (req, res) => {
     try {
       const generatedTasks = await storage.generateRecurringTaskInstances();
+
+      if (generatedTasks.length > 0) {
+        notifyActivity(
+          req,
+          "created",
+          "Task",
+          formatActivitySummary([
+            `Recurring instances (${generatedTasks.length})`,
+            generatedTasks.map((task) => `#${task.id}`).join(", "),
+          ])
+        );
+      }
       
       // Send notifications for each generated task
       for (const task of generatedTasks) {
@@ -1199,6 +1319,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validatedData = insertMaterialRequestSchema.parse(requestData);
       const request = await storage.createMaterialRequest(validatedData, userId);
+
+      notifyActivity(
+        req,
+        "created",
+        "Material request",
+        formatActivitySummary([`#${request.id}`, request.materialType])
+      );
       
       // Send real-time notification
       wsManager.notifyMaterialRequestCreated(request);
@@ -1228,6 +1355,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const validatedData = insertMaterialRequestSchema.partial().parse(req.body);
       const request = await storage.updateMaterialRequest(id, validatedData);
+
+      notifyActivity(
+        req,
+        "edited",
+        "Material request",
+        formatActivitySummary([`#${request.id}`, request.materialType])
+      );
+
       res.json(request);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -1287,6 +1422,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertCommunicationSchema.parse(req.body);
       const communication = await storage.createCommunication(validatedData);
+
+      notifyActivity(
+        req,
+        "created",
+        "Communication",
+        formatActivitySummary([`#${communication.id}`, communication.type, communication.content])
+      );
+
       res.status(201).json(communication);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -1359,6 +1502,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const message = await storage.createColabMessage(messageData);
+
+      notifyActivity(
+        req,
+        "created",
+        "Colab message",
+        formatActivitySummary([`#${message.id}`, message.content])
+      );
       
       // Broadcast to WebSocket clients for real-time updates
       wsManager.notifyColabMessage(message);
@@ -1442,6 +1592,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertVacancySchema.parse(req.body);
       const normalizedData = normalizeVacancyDates(validatedData);
       const vacancy = await storage.createVacancy(normalizedData);
+
+      notifyActivity(
+        req,
+        "created",
+        "Vacancy",
+        formatActivitySummary([`#${vacancy.id}`, vacancy.property, vacancy.apartmentNumber])
+      );
       
       // Send real-time notification
       try {
@@ -1466,6 +1623,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertVacancySchema.partial().parse(req.body);
       const normalizedData = normalizeVacancyDates(validatedData);
       const vacancy = await storage.updateVacancy(id, normalizedData);
+
+      notifyActivity(
+        req,
+        "edited",
+        "Vacancy",
+        formatActivitySummary([`#${vacancy.id}`, vacancy.property, vacancy.apartmentNumber])
+      );
+
       res.json(vacancy);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -1581,6 +1746,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Automatically set the reportedBy field to the current user
       const issueData = { ...validatedData, reportedBy: userId };
       const issue = await storage.createIssue(issueData);
+
+      notifyActivity(
+        req,
+        "created",
+        "Issue",
+        formatActivitySummary([`#${issue.id}`, issue.category, issue.description])
+      );
       
       // Send real-time notification
       try {
@@ -1622,6 +1794,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validatedData = insertIssueSchema.partial().parse(req.body);
       const issue = await storage.updateIssue(id, validatedData);
+
+      notifyActivity(
+        req,
+        "edited",
+        "Issue",
+        formatActivitySummary([`#${issue.id}`, issue.category, issue.description])
+      );
       
       // Send real-time notification
       try {
@@ -1712,6 +1891,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Issue not found" });
       }
 
+      notifyActivity(
+        req,
+        "edited",
+        "Issue",
+        formatActivitySummary([`#${issue.id}`, issue.status, issue.category])
+      );
+
       // Send WebSocket notification
       wsManager.notifyIssueUpdated(issue);
       
@@ -1767,6 +1953,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Note content is required" });
       }
       const note = await storage.createQuickNote(userId, content.trim());
+
+      notifyActivity(
+        req,
+        "created",
+        "Quick note",
+        formatActivitySummary([`#${note.id}`, note.content])
+      );
+
       res.status(201).json(note);
     } catch (error) {
       console.error("Error creating quick note:", error);
@@ -1798,6 +1992,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isPinned !== undefined) updates.isPinned = isPinned;
       
       const note = await storage.updateQuickNote(noteId, updates);
+
+      notifyActivity(
+        req,
+        "edited",
+        "Quick note",
+        formatActivitySummary([`#${note.id}`, note.content])
+      );
+
       res.json(note);
     } catch (error) {
       console.error("Error updating quick note:", error);
